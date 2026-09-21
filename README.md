@@ -112,5 +112,3 @@ npm run dev
 * **Backend API (.NET 8):** [SWD392_Group3](https://github.com/HikariHino/SWD392_Group3)
 
 ---
-
-*SWD392 - Software Architecture and Design | FPT University | Group 3*
