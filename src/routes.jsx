@@ -22,7 +22,7 @@ export default function AppRoutes() {
                 {/* Protected Routes dành cho Teacher (Có MainLayout) */}
                 <Route element={<ProtectedRoute requiredRole="teacher" />}>
                     <Route element={<MainLayout />}>
-                        <Route path="/" element={<Navigate to="/grading" replace />} />
+                        <Route path="/" element={<Navigate to="/questions" replace />} />
                         <Route path="/questions" element={<QuestionList />} />
                         <Route path="/questions/import" element={<ImportQuestion />} />
                         <Route path="/grading" element={<GradingDashboard />} />
