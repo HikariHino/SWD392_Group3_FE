@@ -9,6 +9,7 @@ import {
   CheckCircleFilled,
   DatabaseOutlined,
   FileSearchOutlined,
+  HomeOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
@@ -21,6 +22,7 @@ import {
 } from '@ant-design/icons';
 
 const navigation = [
+  { key: '/dashboard', icon: <HomeOutlined />, label: 'Tổng quan' },
   { key: '/questions', icon: <QuestionCircleOutlined />, label: 'Ngân hàng câu hỏi & Rubric' },
   { key: '/exam-room', icon: <SoundOutlined />, label: 'Phòng thi mô phỏng' },
   { key: '/grading', icon: <FileSearchOutlined />, label: 'Thẩm định chấm điểm' },
@@ -45,7 +47,7 @@ export default function MainLayout() {
       {sidebarOpen && <button className="sidebar-scrim" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} />}
       <aside className={`main-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div>
-          <button className="brand" type="button" onClick={() => goTo('/questions')}>
+          <button className="brand" type="button" onClick={() => goTo('/dashboard')}>
             <span className="brand-mark"><BookOutlined /></span>
             <span className="brand-copy">
               <strong>AI Viva Exam</strong>

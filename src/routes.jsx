@@ -7,6 +7,7 @@ import ImportQuestion from './pages/QuestionBank/ImportQuestion';
 import ExamRoom from './pages/Interview/ExamRoom';
 import GradingDashboard from './pages/Grading/GradingDashboard';
 import ReviewTranscript from './pages/Grading/ReviewTranscript';
+import Dashboard from './pages/Dashboard/Dashboard';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
@@ -22,7 +23,8 @@ export default function AppRoutes() {
                 {/* Protected Routes dành cho Teacher (Có MainLayout) */}
                 <Route element={<ProtectedRoute requiredRole="teacher" />}>
                     <Route element={<MainLayout />}>
-                        <Route path="/" element={<Navigate to="/questions" replace />} />
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/questions" element={<QuestionList />} />
                         <Route path="/questions/import" element={<ImportQuestion />} />
                         <Route path="/grading" element={<GradingDashboard />} />
