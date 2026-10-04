@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Dropdown } from 'antd';
+import { useAuth } from '../../context/AuthContext';
+import { ROLE_LABELS } from '../../services/authApi';
 import {
   AppstoreOutlined,
   BarChartOutlined,
@@ -10,6 +13,7 @@ import {
   DatabaseOutlined,
   FileSearchOutlined,
   HomeOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
@@ -30,11 +34,26 @@ const navigation = [
   { key: '/reports', icon: <BarChartOutlined />, label: 'Thống kê & Giám sát' },
 ];
 
+// Lấy chữ cái đầu của 2 từ cuối trong họ tên: "Nguyễn Văn Hùng" -> "VH"
+const getInitials = (fullName = '') => {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts.slice(-2).map((part) => part[0]).join('').toUpperCase();
+};
+
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [synced, setSynced] = useState(false);
+
+  const initials = getInitials(user?.fullName);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   const goTo = (path) => {
     if (path === '/reports') return;
@@ -77,11 +96,12 @@ export default function MainLayout() {
         <div className="sidebar-bottom">
           <button type="button"><SettingOutlined /><span>Cài đặt hệ thống</span></button>
           <button type="button"><MessageOutlined /><span>Trợ giúp & Hướng dẫn</span></button>
+          <button type="button" onClick={handleLogout}><LogoutOutlined /><span>Đăng xuất</span></button>
           <div className="lecturer-card">
-            <span className="avatar">NH</span>
+            <span className="avatar">{initials}</span>
             <span>
-              <strong>TS. Nguyễn Văn Hùng</strong>
-              <small>Chủ nhiệm Bộ môn HTTT</small>
+              <strong>{user?.fullName}</strong>
+              <small>{ROLE_LABELS[user?.role] || user?.role} · {user?.username}</small>
             </span>
           </div>
         </div>
@@ -115,7 +135,18 @@ export default function MainLayout() {
               <SoundOutlined /><span>Bắt đầu phòng thi</span>
             </button>
             <button className="icon-button notification-button" type="button" aria-label="Thông báo"><BellOutlined /><i /></button>
-            <span className="top-avatar">NH</span>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'who', label: `${user?.fullName} · ${ROLE_LABELS[user?.role] || user?.role}`, disabled: true },
+                  { type: 'divider' },
+                  { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true, onClick: handleLogout },
+                ],
+              }}
+              placement="bottomRight"
+            >
+              <span className="top-avatar" role="button" tabIndex={0} title={user?.fullName}>{initials}</span>
+            </Dropdown>
           </div>
         </header>
 

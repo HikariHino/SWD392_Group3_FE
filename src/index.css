@@ -81,3 +81,7 @@ button { cursor: pointer; }
   .product-name span, .sync-button, .start-button span { display: none; }
   .page-canvas { min-height: calc(100vh - 58px); }
 }
+
+/* Avatar trên thanh top mở menu tài khoản */
+.top-avatar { cursor: pointer; user-select: none; }
+.top-avatar:hover { border-color: #b9d0f7; }

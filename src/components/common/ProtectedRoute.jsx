@@ -1,26 +1,34 @@
-import React, { useContext } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import React from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Spin } from 'antd';
+import { useAuth } from '../../context/AuthContext';
 
+/**
+ * Chặn route theo trạng thái đăng nhập và vai trò.
+ * - Chưa đăng nhập      -> chuyển về /login (nhớ trang đang muốn vào để quay lại sau)
+ * - Sai vai trò yêu cầu -> chuyển về /unauthorized
+ */
 const ProtectedRoute = ({ requiredRole }) => {
-    // Để demo, chúng ta tạm giả định user có role 'teacher'. 
-    // Khi ráp API thật, bạn sẽ lấy từ AuthContext
-    const { user } = useContext(AuthContext); 
-    
-    // Tạm thời fake auth để test giao diện
-    const isAuthenticated = true; // Sẽ thay bằng: !!user
-    const userRole = 'teacher'; // Sẽ thay bằng: user?.role
-    
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+    const { isAuthenticated, user, restoring } = useAuth();
+    const location = useLocation();
+
+    // Chờ khôi phục phiên, tránh đá người dùng ra /login khi vừa F5
+    if (restoring) {
+        return (
+            <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+                <Spin size="large" description="Đang tải..." />
+            </div>
+        );
     }
 
-    // Tạm thời comment đoạn check Role lại để dễ dàng test UI cho cả màn hình Student và Teacher
-    // if (requiredRole && userRole !== requiredRole) {
-    //     return <Navigate to="/unauthorized" replace />;
-    // }
+    if (!isAuthenticated) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
 
-    // Render các route con (Outlet)
+    if (requiredRole && user?.role !== requiredRole) {
+        return <Navigate to="/unauthorized" replace />;
+    }
+
     return <Outlet />;
 };
 

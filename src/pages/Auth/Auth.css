@@ -1,0 +1,38 @@
+.auth-page { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(430px, .95fr); background: #f6f8fc; color: #172033; }
+
+/* Cột trái: giới thiệu hệ thống */
+.auth-aside { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 48px; color: #eaf1ff; background: linear-gradient(155deg, #11306e 0%, #1a4aa8 52%, #2463e8 100%); }
+.auth-aside::after { content: ""; position: absolute; right: -130px; bottom: -160px; width: 420px; height: 420px; border-radius: 50%; background: rgba(255, 255, 255, .07); }
+.auth-brand { display: flex; align-items: center; gap: 12px; }
+.auth-brand .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: rgba(255, 255, 255, .16); box-shadow: none; font-size: 21px; }
+.auth-brand strong { display: block; font: 700 18px/1.35 "Plus Jakarta Sans", sans-serif; letter-spacing: -.3px; }
+.auth-brand small { color: rgba(234, 241, 255, .72); font-size: 10.5px; }
+.auth-pitch { position: relative; z-index: 1; max-width: 430px; }
+.auth-pitch h2 { margin: 0 0 12px; color: #fff; font: 800 29px/1.28 "Plus Jakarta Sans", sans-serif; letter-spacing: -.7px; }
+.auth-pitch p { margin: 0 0 24px; color: rgba(234, 241, 255, .8); font-size: 12.5px; line-height: 1.65; }
+.auth-points { display: flex; flex-direction: column; gap: 11px; padding: 0; margin: 0; list-style: none; }
+.auth-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.5; }
+.auth-points .anticon { margin-top: 2px; flex: 0 0 auto; color: #8fd3ff; font-size: 14px; }
+.auth-foot { position: relative; z-index: 1; color: rgba(234, 241, 255, .6); font-size: 10px; }
+
+/* Cột phải: biểu mẫu */
+.auth-panel { display: grid; place-items: center; padding: 40px 34px; }
+.auth-card { width: 100%; max-width: 392px; }
+.auth-card h1 { margin: 0 0 5px; font: 700 23px "Plus Jakarta Sans", sans-serif; letter-spacing: -.5px; }
+.auth-card > p { margin: 0 0 22px; color: #748094; font-size: 12px; }
+.auth-form .ant-form-item { margin-bottom: 15px; }
+.auth-form .ant-form-item-label > label { color: #4b5668; font-size: 11.5px; font-weight: 600; }
+.auth-form .ant-input-affix-wrapper, .auth-form .ant-input, .auth-form .ant-select-selector { border-radius: 8px; }
+.auth-submit { width: 100%; margin-top: 4px; }
+.auth-switch { margin: 18px 0 0; color: #748094; font-size: 11.5px; text-align: center; }
+.auth-switch button { padding: 0 2px; border: 0; color: #1c58ce; background: transparent; font-size: 11.5px; font-weight: 700; }
+.auth-switch button:hover { text-decoration: underline; }
+.auth-hint { margin-top: 18px; padding: 11px 12px; border: 1px solid #dfe7f4; border-radius: 8px; background: #f3f7fd; color: #647187; font-size: 10px; line-height: 1.6; }
+.auth-hint strong { display: block; margin-bottom: 3px; color: #334155; font-size: 10.5px; }
+.auth-hint code { padding: 1px 4px; border-radius: 3px; color: #1f5bcf; background: #e7eefb; font: 600 9.5px Consolas, monospace; }
+
+@media (max-width: 980px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-aside { display: none; }
+  .auth-panel { padding: 28px 18px; align-content: center; }
+}
