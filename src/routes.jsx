@@ -7,6 +7,7 @@ import ExamRoom from './pages/Interview/ExamRoom';
 import GradingDashboard from './pages/Grading/GradingDashboard';
 import ReviewTranscript from './pages/Grading/ReviewTranscript';
 import Dashboard from './pages/Dashboard/Dashboard';
+import Reports from './pages/Reports/Reports';
 import UserList from './pages/UserManagement/UserList';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -29,6 +30,7 @@ export default function AppRoutes() {
                         <Route path="/questions" element={<QuestionList />} />
                         <Route path="/users" element={<UserList />} />
                         <Route path="/questions/import" element={<ImportQuestion />} />
+                        <Route path="/reports" element={<Reports />} />
                         <Route path="/grading" element={<GradingDashboard />} />
                         <Route path="/grading/review" element={<ReviewTranscript />} />
                     </Route>

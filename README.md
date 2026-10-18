@@ -1,5 +1,7 @@
 # 🎓 AIVES - Frontend Web Application
 
+Hướng dẫn chạy và kiểm tra bản demo hiện tại: [Demo Milestone 3](docs/DEMO_M3.md). Source chính nằm tại `src/`; cấu hình Vite trong `frontend-react/` cũng sử dụng source này.
+
 > **SWD392 (Software Architecture and Design) - Group 3**  
 > Client-side interface for the AI-powered Viva Exam System, built with **React 19**, **Vite**, **Ant Design**, and **SignalR** for real-time audio streaming.
 

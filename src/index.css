@@ -78,7 +78,7 @@ button { cursor: pointer; }
 }
 @media (max-width: 600px) {
   .topbar { height: 58px; padding-inline: 12px; }
-  .product-name span, .sync-button, .start-button span { display: none; }
+  .product-name > span:not(.anticon), .sync-button, .start-button > span:not(.anticon) { display: none; }
   .page-canvas { min-height: calc(100vh - 58px); }
 }
 

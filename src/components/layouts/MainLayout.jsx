@@ -3,27 +3,20 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Dropdown } from 'antd';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../services/authApi';
+import '../../styles/WorkspacePages.css';
 import {
   AppstoreOutlined,
   BarChartOutlined,
-  BellOutlined,
   BookOutlined,
-  CalendarOutlined,
-  CheckCircleFilled,
   DatabaseOutlined,
   FileSearchOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  MessageOutlined,
-  NotificationOutlined,
   QuestionCircleOutlined,
-  SettingOutlined,
   SoundOutlined,
-  SyncOutlined,
   TeamOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 
 const navigation = [
@@ -31,7 +24,7 @@ const navigation = [
   { key: '/questions', icon: <QuestionCircleOutlined />, label: 'Ngân hàng câu hỏi & Rubric' },
   { key: '/exam-room', icon: <SoundOutlined />, label: 'Phòng thi mô phỏng' },
   { key: '/grading', icon: <FileSearchOutlined />, label: 'Thẩm định chấm điểm' },
-  { key: '/questions/import', icon: <DatabaseOutlined />, label: 'Kho tài liệu & RAG' },
+  { key: '/questions/import', icon: <DatabaseOutlined />, label: 'Nhập câu hỏi từ tài liệu' },
   { key: '/users', icon: <TeamOutlined />, label: 'Quản lý người dùng' },
   { key: '/reports', icon: <BarChartOutlined />, label: 'Thống kê & Giám sát' },
 ];
@@ -48,7 +41,6 @@ export default function MainLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [synced, setSynced] = useState(false);
 
   const initials = getInitials(user?.fullName);
 
@@ -58,7 +50,6 @@ export default function MainLayout() {
   };
 
   const goTo = (path) => {
-    if (path === '/reports') return;
     navigate(path);
     setSidebarOpen(false);
   };
@@ -77,8 +68,8 @@ export default function MainLayout() {
           </button>
 
           <div className="exam-status">
-            <span><i /> Kỳ thi đang diễn ra</span>
-            <code>HĐH-2025</code>
+            <span><i /> Không gian giảng viên</span>
+            <code>AIVES</code>
           </div>
 
           <nav className="side-nav" aria-label="Điều hướng chính">
@@ -96,8 +87,6 @@ export default function MainLayout() {
         </div>
 
         <div className="sidebar-bottom">
-          <button type="button"><SettingOutlined /><span>Cài đặt hệ thống</span></button>
-          <button type="button"><MessageOutlined /><span>Trợ giúp & Hướng dẫn</span></button>
           <button type="button" onClick={handleLogout}><LogoutOutlined /><span>Đăng xuất</span></button>
           <div className="lecturer-card">
             <span className="avatar">{initials}</span>
@@ -118,25 +107,10 @@ export default function MainLayout() {
             <div className="product-name"><AppstoreOutlined /> <span>AI Oral Exam System</span></div>
           </div>
 
-          <nav className="top-links">
-            <button className="selected" type="button"><CalendarOutlined /> Kỳ thi 2025</button>
-            <button type="button"><UserOutlined /> Lớp môn học</button>
-            <button type="button"><NotificationOutlined /> Báo cáo gian lận</button>
-          </nav>
-
           <div className="top-actions">
-            <button
-              className="btn btn-soft sync-button"
-              type="button"
-              onClick={() => { setSynced(true); window.setTimeout(() => setSynced(false), 1800); }}
-            >
-              {synced ? <CheckCircleFilled /> : <SyncOutlined spin={synced} />}
-              <span>{synced ? 'Đã đồng bộ' : 'Đồng bộ RAG'}</span>
-            </button>
-            <button className="btn btn-primary start-button" type="button" onClick={() => navigate('/exam-room')}>
+            <button className="btn btn-primary start-button" type="button" aria-label="Bắt đầu phòng thi" onClick={() => navigate('/exam-room')}>
               <SoundOutlined /><span>Bắt đầu phòng thi</span>
             </button>
-            <button className="icon-button notification-button" type="button" aria-label="Thông báo"><BellOutlined /><i /></button>
             <Dropdown
               menu={{
                 items: [
@@ -146,9 +120,14 @@ export default function MainLayout() {
                 ],
               }}
               placement="bottomRight"
+              trigger={['click']}
             >
-              <span className="top-avatar" role="button" tabIndex={0} title={user?.fullName}>{initials}</span>
+              <button className="account-trigger" type="button" aria-label="Mở menu tài khoản">
+                <span className="top-avatar">{initials}</span>
+                <span className="account-copy"><strong>{user?.fullName || user?.username}</strong><small>{ROLE_LABELS[user?.role] || user?.role} ({user?.role})</small></span>
+              </button>
             </Dropdown>
+            <button className="btn btn-secondary header-logout" type="button" onClick={handleLogout}><LogoutOutlined /> Đăng xuất</button>
           </div>
         </header>
 
