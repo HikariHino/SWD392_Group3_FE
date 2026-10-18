@@ -22,6 +22,7 @@ import {
   SettingOutlined,
   SoundOutlined,
   SyncOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 
@@ -31,6 +32,7 @@ const navigation = [
   { key: '/exam-room', icon: <SoundOutlined />, label: 'Phòng thi mô phỏng' },
   { key: '/grading', icon: <FileSearchOutlined />, label: 'Thẩm định chấm điểm' },
   { key: '/questions/import', icon: <DatabaseOutlined />, label: 'Kho tài liệu & RAG' },
+  { key: '/users', icon: <TeamOutlined />, label: 'Quản lý người dùng' },
   { key: '/reports', icon: <BarChartOutlined />, label: 'Thống kê & Giám sát' },
 ];
 

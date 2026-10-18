@@ -137,9 +137,10 @@ export default function Login() {
                         </Button>
                     </Form>
 
-                    <p className="auth-switch">
-                        Chưa có tài khoản?
-                        <button type="button" onClick={() => navigate('/register')}>Đăng ký ngay</button>
+                    <p className="auth-hint">
+                        <strong>Chưa có tài khoản?</strong>
+                        Tài khoản do Giảng viên tạo trong mục <code>Quản lý người dùng</code>. Hãy liên hệ
+                        giảng viên phụ trách để được cấp tài khoản.
                     </p>
                 </div>
             </main>

@@ -1,13 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Auth/Login';
-import Register from './pages/Auth/Register';
 import QuestionList from './pages/QuestionBank/QuestionList';
 import ImportQuestion from './pages/QuestionBank/ImportQuestion';
 import ExamRoom from './pages/Interview/ExamRoom';
 import GradingDashboard from './pages/Grading/GradingDashboard';
 import ReviewTranscript from './pages/Grading/ReviewTranscript';
 import Dashboard from './pages/Dashboard/Dashboard';
+import UserList from './pages/UserManagement/UserList';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Unauthorized from './pages/Auth/Unauthorized';
@@ -20,7 +20,6 @@ export default function AppRoutes() {
             <Routes>
                 {/* Public Routes (Không có Layout / Layout rỗng) */}
                 <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
 
                 {/* Protected Routes dành cho Giảng viên (Có MainLayout) */}
@@ -28,6 +27,7 @@ export default function AppRoutes() {
                     <Route element={<MainLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/questions" element={<QuestionList />} />
+                        <Route path="/users" element={<UserList />} />
                         <Route path="/questions/import" element={<ImportQuestion />} />
                         <Route path="/grading" element={<GradingDashboard />} />
                         <Route path="/grading/review" element={<ReviewTranscript />} />

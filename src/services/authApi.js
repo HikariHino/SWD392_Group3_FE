@@ -8,7 +8,10 @@ export const authApi = {
     // GET /api/auth/me (cần Bearer token) -> { id, username, role }
     getMe: () => axiosClient.get('/auth/me'),
     // POST /api/users { username, password, fullName, role } -> UserDto
+    // Từ Milestone 2, endpoint này yêu cầu vai trò Lecturer
     register: (data) => axiosClient.post('/users', data),
+    // GET /api/users (chỉ Lecturer) -> UserDto[]
+    getUsers: () => axiosClient.get('/users'),
 };
 
 // Role do Backend định nghĩa (Application/Validators/UserManagement/CreateUserDtoValidator.cs)

@@ -132,7 +132,15 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
         try {
             values = await form.validateFields();
         } catch {
-            return; // Lỗi validation đã hiển thị trên form
+            // Tổng trọng số Rubric sai là lỗi hay gặp nhất -> báo Toast đỏ cho dễ thấy,
+            // ngoài dòng lỗi đã hiển thị sẵn dưới danh sách tiêu chí.
+            const total = sumWeight(form.getFieldValue('rubrics'));
+            if (Math.abs(total - 100) >= 0.01) {
+                message.error(
+                    `Tổng trọng số Rubric đang là ${total}%, phải bằng đúng 100% mới lưu được.`,
+                );
+            }
+            return; // Các lỗi còn lại đã hiển thị ngay tại ô nhập
         }
 
         const payload = {
