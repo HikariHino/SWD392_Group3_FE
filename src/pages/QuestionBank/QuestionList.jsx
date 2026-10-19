@@ -30,6 +30,7 @@ import { BLOOM_LEVELS, getBloomLevel } from '../../utils/bloomLevel';
 import { parseApiError } from '../../utils/apiError';
 import { formatDate } from '../../utils/formatDate';
 import QuestionFormModal from './components/QuestionFormModal';
+import AiGenerateModal from './components/AiGenerateModal';
 import './QuestionList.css';
 
 const DEFAULT_QUERY = {
@@ -74,6 +75,7 @@ export default function QuestionList() {
   const [deletingId, setDeletingId] = useState(null);
   // modal = { open, questionId } ; questionId = null -> Thêm mới
   const [modal, setModal] = useState({ open: false, questionId: null });
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -184,6 +186,9 @@ export default function QuestionList() {
           <p>Quản lý câu hỏi vấn đáp và chuẩn hóa ma trận chấm điểm (Rubric) cho từng câu hỏi.</p>
         </div>
         <div className="heading-actions">
+          <button className="btn btn-secondary" type="button" onClick={() => setAiModalOpen(true)}>
+            <RobotOutlined style={{ color: '#7b43b6' }} /> Sinh bằng AI Gemini
+          </button>
           <button className="btn btn-secondary" type="button" onClick={() => navigate('/questions/import')}><CloudDownloadOutlined /> Nhập từ tài liệu</button>
           <button className="btn btn-primary" type="button" onClick={openCreate}><PlusOutlined /> Tạo câu hỏi mới</button>
         </div>
@@ -369,6 +374,17 @@ export default function QuestionList() {
         defaultCourseId={query.courseId || undefined}
         onCancel={() => setModal({ open: false, questionId: null })}
         onSaved={handleSaved}
+      />
+
+      <AiGenerateModal
+        open={aiModalOpen}
+        courses={courses}
+        defaultCourseId={query.courseId || undefined}
+        onCancel={() => setAiModalOpen(false)}
+        onSaved={() => {
+          setAiModalOpen(false);
+          fetchQuestions();
+        }}
       />
     </div>
   );

@@ -15,4 +15,6 @@ export const questionApi = {
     // GET /api/questions/courses
     getCourses: (config = {}) => axiosClient.get('/questions/courses', config),
     importQuestions: (data) => axiosClient.post('/questions/import', data),
+    // POST /api/questions/ai-generate { courseId, topic, bloomLevel }
+    generateQuestionWithAi: (data) => axiosClient.post('/questions/ai-generate', data),
 };
