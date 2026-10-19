@@ -17,6 +17,7 @@ const pending = new Map();
 let socket, nextId = 0;
 const runtimeErrors = [], apiErrors = [], requestedPages = [];
 let imported = null, failQuestions = false;
+let generated = null, savedQuestion = null, generationCount = 0, failGeneration = false, invalidGeneration = false, failSave = false;
 const user = { id: 'lecturer-test', username: 'lecturer', fullName: 'ThS. Nguyễn Văn C', role: 'Lecturer' };
 const courseId = '11111111-1111-1111-1111-111111111111';
 const courses = [{ id: courseId, code: 'SWD392', name: 'Software Design' }, { id: '22222222-2222-2222-2222-222222222222', code: 'PRN231', name: '.NET' }];
@@ -42,11 +43,11 @@ async function clickText(text) {
     assert.ok(found, `Button/link exists: ${text}`);
 }
 async function input(selector, value) {
-    await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
 }
-async function screenshot(name) {
+async function screenshot(name, captureBeyondViewport = true) {
     await delay(500); // Allow layout transitions and Ant Design chart animations to settle.
-    const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+    const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport });
     await writeFile(path.join(output, name + '.png'), Buffer.from(data, 'base64'));
 }
 async function fulfill(event) {
@@ -57,11 +58,26 @@ async function fulfill(event) {
     else if (url.pathname.endsWith('/auth/me')) body = user;
     else if (event.request.headers.Authorization !== 'Bearer fixture-token' && event.request.headers.authorization !== 'Bearer fixture-token') { status = 401; body = { title: 'Unauthorized' }; }
     else if (url.pathname.endsWith('/questions/courses')) body = courses;
+    else if (url.pathname.endsWith('/questions/ai-generate')) {
+        generationCount++;
+        generated = JSON.parse(event.request.postData);
+        await delay(300);
+        if (failGeneration) { status = 503; body = { message: 'Dịch vụ AI tạm thời không khả dụng' }; }
+        else if (invalidGeneration) body = {};
+        else body = { ...structuredClone(IMPORT_EXAMPLE[0]), ...generated, content: 'Bản nháp AI về Onion Architecture' };
+    }
     else if (url.pathname.endsWith('/questions/import')) {
         imported = JSON.parse(event.request.postData);
         body = { message: 'Đã import thành công' }; status = 201;
     } else if (url.pathname.endsWith('/questions')) {
-        if (failQuestions) { status = 500; body = { title: 'Lỗi kiểm thử kết nối' }; }
+        if (event.request.method === 'POST') {
+            if (failSave) { status = 400; body = { message: 'Không thể lưu bản nháp lúc này' }; }
+            else {
+                savedQuestion = JSON.parse(event.request.postData);
+                body = { ...structuredClone(savedQuestion), id: 'ai-saved-question', courseCode: 'SWD392', createdAt: '2026-10-19T08:00:00Z', rubrics: savedQuestion.rubrics.map((r, i) => ({ ...r, id: `ai-r-${i}` })) };
+                questions.unshift(body); status = 201;
+            }
+        } else if (failQuestions) { status = 500; body = { title: 'Lỗi kiểm thử kết nối' }; }
         else {
             const index = Number(url.searchParams.get('pageIndex') || 1), size = Number(url.searchParams.get('pageSize') || 10);
             requestedPages.push(index);
@@ -92,7 +108,7 @@ try {
     };
     await send('Runtime.enable'); await send('Page.enable');
     await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
-    await send('Fetch.enable', { patterns: [{ urlPattern: 'http://localhost:5110/api/*' }] });
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*://localhost:*/api/*' }] });
     await send('Page.navigate', { url: 'http://127.0.0.1:5173/reports' });
     await waitFor('!!document.querySelector("#username")', 'unauthenticated route redirects to login');
     assert.equal(await evaluate('location.pathname'), '/login');
@@ -139,6 +155,50 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await screenshot('import-mobile');
     assert.ok(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'mobile has no document overflow');
+    await send('Page.navigate', { url: 'http://127.0.0.1:5173/questions' });
+    await waitFor('!!document.querySelector(".question-card")', 'question bank');
+    await clickText('Sinh bằng AI Gemini');
+    await clickText('Sinh câu hỏi');
+    await waitFor('document.body.innerText.includes("Vui lòng nhập chủ đề câu hỏi.")', 'AI required fields');
+    assert.equal(generationCount, 0, 'invalid form does not call AI');
+    await evaluate('document.querySelector("#ai-question_courseId").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }))');
+    await waitFor('!!document.querySelector(".ant-select-item-option")', 'AI courses');
+    await evaluate('document.querySelector(".ant-select-item-option").click()');
+    await input('#ai-question_topic', '   '); await clickText('Sinh câu hỏi');
+    await delay(200); assert.equal(generationCount, 0, 'blank topic rejected');
+    await input('#ai-question_topic', '  Onion Architecture  ');
+    failGeneration = true; await clickText('Sinh câu hỏi');
+    await waitFor('document.body.innerText.includes("Dịch vụ AI tạm thời không khả dụng")', 'AI error');
+    assert.equal(await evaluate('document.querySelector("#ai-question_topic").value'), '  Onion Architecture  ');
+    failGeneration = false; invalidGeneration = true; await clickText('Sinh câu hỏi');
+    await waitFor('document.body.innerText.includes("Máy chủ trả về bản nháp không hợp lệ")', 'malformed AI response');
+    invalidGeneration = false; await clickText('Sinh câu hỏi');
+    await waitFor('document.body.innerText.includes("Đang sinh câu hỏi và Rubric")', 'AI loading');
+    assert.ok(await evaluate('document.querySelector("#ai-question_topic").disabled'), 'form locked during generation');
+    await waitFor('document.body.innerText.includes("Xem và chỉnh sửa câu hỏi AI")', 'AI editable preview');
+    assert.deepEqual(generated, { courseId, topic: 'Onion Architecture', bloomLevel: 4 });
+    assert.equal(savedQuestion, null, 'generation does not save');
+    assert.equal(await evaluate('document.querySelector("#content").value'), 'Bản nháp AI về Onion Architecture');
+    await input('#rubrics_0_weight', '10'); await clickText('Lưu vào ngân hàng');
+    await waitFor('document.body.innerText.includes("phải bằng đúng 100%")', 'generated rubric validation');
+    assert.equal(savedQuestion, null, 'invalid rubric cannot save');
+    await input('#rubrics_0_weight', String(IMPORT_EXAMPLE[0].rubrics[0].weight));
+    await input('#content', 'Câu hỏi AI đã được giảng viên chỉnh sửa');
+    await screenshot('ai-preview-mobile', false);
+    assert.ok(await evaluate('(() => { const modal = document.querySelector(".ant-modal"); const bounds = modal.getBoundingClientRect(); return [...modal.querySelectorAll("input,textarea")].every(field => { const rect = field.getBoundingClientRect(); return rect.width === 0 || (rect.left >= bounds.left && rect.right <= bounds.right); }); })()'), 'AI preview fields fit modal width');
+    assert.ok(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'AI mobile has no document overflow');
+    failSave = true; await clickText('Lưu vào ngân hàng');
+    await waitFor('document.body.innerText.includes("Không thể lưu bản nháp lúc này")', 'save error retains draft');
+    assert.equal(await evaluate('document.querySelector("#content").value'), 'Câu hỏi AI đã được giảng viên chỉnh sửa');
+    failSave = false; await clickText('Lưu vào ngân hàng');
+    await waitFor('document.querySelector(".question-card h3")?.textContent.includes("Câu hỏi AI đã được giảng viên chỉnh sửa")', 'saved question refreshed');
+    assert.equal(savedQuestion.courseId, courseId);
+    assert.equal(savedQuestion.bloomLevel, 4);
+    assert.equal(savedQuestion.rubrics.reduce((sum, r) => sum + r.weight, 0), 100);
+    await clickText('Sinh bằng AI Gemini');
+    await waitFor('!!document.querySelector("#ai-question_topic")', 'AI reopened');
+    assert.equal(await evaluate('document.querySelector("#ai-question_topic").value'), '', 'new generation starts clean');
+    await clickText('Huỷ');
     await clickText('Đăng xuất');
     await waitFor('location.pathname === "/login"', 'logout redirect');
     assert.equal(await evaluate('localStorage.getItem("token")'), null);
@@ -150,7 +210,7 @@ try {
     await waitFor('location.pathname === "/unauthorized"', 'Student denied Lecturer route');
     assert.equal(runtimeErrors.length, 0, JSON.stringify(runtimeErrors));
     assert.equal(apiErrors.length, 0, JSON.stringify(apiErrors));
-    console.log('PASS: login, Lecturer header, guarded routes, paginated reports, retry, import validation/persistence payload, mobile layout and logout (mock API).');
+    console.log('PASS: login, guarded routes, reports, import, AI validation/error/retry/preview/edit/save, mobile layout and logout (mock API).');
     console.log(`Screenshots: ${output}`);
 } finally {
     if (socket?.readyState === WebSocket.OPEN) { try { await send('Browser.close'); } catch { /* browser closed */ } socket.close(); }

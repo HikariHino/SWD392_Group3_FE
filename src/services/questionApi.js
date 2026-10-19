@@ -14,5 +14,8 @@ export const questionApi = {
     deleteQuestion: (id) => axiosClient.delete(`/questions/${id}`),
     // GET /api/questions/courses
     getCourses: (config = {}) => axiosClient.get('/questions/courses', config),
+    // Returns a draft; POST /questions persists it after the lecturer reviews it.
+    generateQuestionWithAi: (data, config = {}) =>
+        axiosClient.post('/questions/ai-generate', data, { timeout: 120000, ...config }),
     importQuestions: (data) => axiosClient.post('/questions/import', data),
 };
