@@ -85,15 +85,18 @@ SWD392_Group3_FE/
 
 ### 1. Prerequisites
 * [Node.js (v18 or higher)](https://nodejs.org/)
-* Backend API must be running at `https://localhost:7123`
+* Backend API chạy tại `http://localhost:5110` (profile `http`) hoặc `https://localhost:7035` (profile `https`).
 
 ### 2. Environment Configuration
 Tạo file `.env` ở thư mục gốc với nội dung:
 
 ```env
-VITE_API_BASE_URL=https://localhost:7123
-VITE_SIGNALR_HUB_URL=https://localhost:7123/interviewHub
+VITE_API_BASE_URL=http://localhost:5110/api
 ```
+
+Có thể sao chép `.env.example` thành `.env`. Nếu chạy HTTPS, đổi URL thành `https://localhost:7035/api` và tin cậy chứng chỉ bằng `dotnet dev-certs https --trust`. Khởi động lại Vite sau khi thay đổi `.env`. Mở FE tại `http://localhost:5173` để khớp CORS backend.
+
+Trong ngân hàng câu hỏi, bấm **Sinh bằng AI Gemini**, chọn môn học, nhập chủ đề và mức Bloom. FE gọi `POST /api/questions/ai-generate`, sau đó mở bản nháp để chỉnh sửa nội dung/Rubric. Bấm **Lưu vào ngân hàng** mới gửi `POST /api/questions`. Gemini API key được cấu hình ở backend, không đưa vào biến `VITE_*`. Backend hiện có cơ chế sinh câu hỏi dự phòng khi Gemini không khả dụng; phản hồi chưa có trường phân biệt nguồn sinh.
 
 ### 3. Run the Frontend App
 

@@ -60,7 +60,7 @@ const notBlank = (label) => ({
  * - questionId = null  -> chế độ Thêm mới (POST /api/questions)
  * - questionId = <id>  -> chế độ Sửa    (GET + PUT /api/questions/{id})
  */
-export default function QuestionFormModal({ open, questionId, courses, defaultCourseId, onCancel, onSaved }) {
+export default function QuestionFormModal({ open, questionId, initialQuestion, courses, defaultCourseId, onCancel, onSaved }) {
     const { message } = App.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
         form.resetFields();
 
         if (!isEdit) {
-            form.setFieldsValue({ courseId: defaultCourseId });
+            form.setFieldsValue(initialQuestion || { courseId: defaultCourseId });
             return;
         }
 
@@ -178,18 +178,27 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
     return (
         <Modal
             open={open}
-            title={isEdit ? 'Sửa câu hỏi' : 'Thêm câu hỏi mới'}
+            title={isEdit ? 'Sửa câu hỏi' : initialQuestion ? 'Xem và chỉnh sửa câu hỏi AI' : 'Thêm câu hỏi mới'}
             width={820}
-            okText={isEdit ? 'Lưu thay đổi' : 'Tạo câu hỏi'}
+            okText={isEdit ? 'Lưu thay đổi' : initialQuestion ? 'Lưu vào ngân hàng' : 'Tạo câu hỏi'}
             cancelText="Huỷ"
             onOk={handleSubmit}
             onCancel={onCancel}
             confirmLoading={submitting}
+            cancelButtonProps={{ disabled: submitting }}
+            closable={!submitting}
+            keyboard={!submitting}
             okButtonProps={{ disabled: loading }}
             mask={{ closable: false }}
             forceRender
         >
             <Spin spinning={loading}>
+                {initialQuestion && !isEdit && (
+                    <Alert type="info" showIcon style={{ marginBottom: 16 }}
+                        title="Bản nháp chưa được lưu"
+                        description="Kiểm tra nội dung và tiêu chí Rubric trước khi lưu vào ngân hàng câu hỏi."
+                    />
+                )}
                 {serverError && (
                     <Alert
                         type="error"
@@ -259,9 +268,9 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
                         />
                     </Form.Item>
 
-                    <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
                         <Text strong>Tiêu chí chấm điểm (Rubric)</Text>
-                        <Space>
+                        <Space wrap>
                             <Text type="secondary">Tổng trọng số:</Text>
                             <Tag color={Math.abs(totalWeight - 100) < 0.01 ? 'success' : 'error'}>
                                 {totalWeight}% / 100%
@@ -277,26 +286,12 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
                     <Form.List name="rubrics" rules={rubricListRules}>
                         {(fields, { add, remove }, { errors }) => (
                             <>
-                                {fields.length > 0 && (
-                                    <Row gutter={8} style={{ marginBottom: 4 }}>
-                                        <Col flex="auto">
-                                            <Text type="secondary">Tên tiêu chí</Text>
-                                        </Col>
-                                        <Col flex="130px">
-                                            <Text type="secondary">Trọng số (%)</Text>
-                                        </Col>
-                                        <Col flex="130px">
-                                            <Text type="secondary">Điểm tối đa</Text>
-                                        </Col>
-                                        <Col flex="32px" />
-                                    </Row>
-                                )}
-
                                 {fields.map(({ key, name }) => (
                                     <Row key={key} gutter={8} align="top">
-                                        <Col flex="auto">
+                                        <Col xs={24} sm={12}>
                                             <Form.Item
                                                 name={[name, 'criteria']}
+                                                label={`Tiêu chí ${name + 1}`}
                                                 rules={[
                                                     { required: true, message: 'Tiêu chí không được để trống.' },
                                                     notBlank('Tiêu chí'),
@@ -306,9 +301,10 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
                                                 <Input placeholder="VD: Giải thích đúng khái niệm" />
                                             </Form.Item>
                                         </Col>
-                                        <Col flex="130px">
+                                        <Col xs={10} sm={5}>
                                             <Form.Item
                                                 name={[name, 'weight']}
+                                                label="Trọng số (%)"
                                                 rules={[
                                                     { required: true, message: 'Nhập trọng số.' },
                                                     { type: 'number', min: 0.01, max: 100, message: 'Từ 0.01 đến 100.' },
@@ -324,9 +320,10 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
                                                 />
                                             </Form.Item>
                                         </Col>
-                                        <Col flex="130px">
+                                        <Col xs={10} sm={5}>
                                             <Form.Item
                                                 name={[name, 'maxScore']}
+                                                label="Điểm tối đa"
                                                 rules={[
                                                     { required: true, message: 'Nhập điểm tối đa.' },
                                                     { type: 'number', min: 0.01, max: 100, message: 'Từ 0.01 đến 100.' },
@@ -335,7 +332,7 @@ export default function QuestionFormModal({ open, questionId, courses, defaultCo
                                                 <InputNumber style={{ width: '100%' }} min={0} max={100} step={1} />
                                             </Form.Item>
                                         </Col>
-                                        <Col flex="32px">
+                                        <Col xs={4} sm={2} style={{ paddingTop: 30 }}>
                                             <Tooltip title="Xoá tiêu chí">
                                                 <Button
                                                     type="text"

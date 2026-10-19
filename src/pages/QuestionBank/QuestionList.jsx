@@ -30,7 +30,7 @@ import { BLOOM_LEVELS, getBloomLevel } from '../../utils/bloomLevel';
 import { parseApiError } from '../../utils/apiError';
 import { formatDate } from '../../utils/formatDate';
 import QuestionFormModal from './components/QuestionFormModal';
-import AiGenerateModal from './components/AiGenerateModal';
+import GenerateQuestionModal from './components/GenerateQuestionModal';
 import './QuestionList.css';
 
 const DEFAULT_QUERY = {
@@ -155,7 +155,10 @@ export default function QuestionList() {
   const handleSaved = () => {
     const isCreate = !modal.questionId;
     setModal({ open: false, questionId: null });
-    if (isCreate && query.pageIndex !== 1) {
+    if (modal.initialQuestion) {
+      setSearchText('');
+      setQuery({ ...DEFAULT_QUERY, pageSize: query.pageSize });
+    } else if (isCreate && query.pageIndex !== 1) {
       // Câu hỏi mới được sắp xếp lên đầu (CreatedAt giảm dần) -> quay về trang 1 để thấy ngay
       setQuery((q) => ({ ...q, pageIndex: 1 }));
     } else {
@@ -186,9 +189,7 @@ export default function QuestionList() {
           <p>Quản lý câu hỏi vấn đáp và chuẩn hóa ma trận chấm điểm (Rubric) cho từng câu hỏi.</p>
         </div>
         <div className="heading-actions">
-          <button className="btn btn-secondary" type="button" onClick={() => setAiModalOpen(true)}>
-            <RobotOutlined style={{ color: '#7b43b6' }} /> Sinh bằng AI Gemini
-          </button>
+          <button className="btn btn-soft" type="button" onClick={() => setAiModalOpen(true)}><RobotOutlined /> Sinh bằng AI Gemini</button>
           <button className="btn btn-secondary" type="button" onClick={() => navigate('/questions/import')}><CloudDownloadOutlined /> Nhập từ tài liệu</button>
           <button className="btn btn-primary" type="button" onClick={openCreate}><PlusOutlined /> Tạo câu hỏi mới</button>
         </div>
@@ -367,24 +368,26 @@ export default function QuestionList() {
         </aside>
       </div>
 
+      {aiModalOpen && (
+        <GenerateQuestionModal
+          courses={courses}
+          defaultCourseId={query.courseId || undefined}
+          defaultBloomLevel={Number(query.bloomLevel) || 4}
+          onCancel={() => setAiModalOpen(false)}
+          onGenerated={(initialQuestion) => {
+            setAiModalOpen(false);
+            setModal({ open: true, questionId: null, initialQuestion });
+          }}
+        />
+      )}
       <QuestionFormModal
         open={modal.open}
+        initialQuestion={modal.initialQuestion}
         questionId={modal.questionId}
         courses={courses}
         defaultCourseId={query.courseId || undefined}
         onCancel={() => setModal({ open: false, questionId: null })}
         onSaved={handleSaved}
-      />
-
-      <AiGenerateModal
-        open={aiModalOpen}
-        courses={courses}
-        defaultCourseId={query.courseId || undefined}
-        onCancel={() => setAiModalOpen(false)}
-        onSaved={() => {
-          setAiModalOpen(false);
-          fetchQuestions();
-        }}
       />
     </div>
   );
