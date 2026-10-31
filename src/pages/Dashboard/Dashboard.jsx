@@ -30,6 +30,6 @@ export default function Dashboard() {
                 { title: 'Bloom', dataIndex: 'bloomLevel', width: 130, render: (value) => <Tag color={getBloomLevel(value)?.color}>{getBloomLevel(value)?.name ?? value}</Tag> },
             ]} />}
         </Card>
-        <Space wrap><Link className="btn btn-secondary" to="/users">Quản lý người dùng</Link><Link className="btn btn-secondary" to="/exam-room">Phòng thi mô phỏng</Link><Link className="btn btn-secondary" to="/grading">Thẩm định chấm điểm</Link></Space>
+        <Space wrap><Link className="btn btn-secondary" to="/users">Quản lý người dùng</Link><Link className="btn btn-secondary" to="/exam-sessions">Ca thi vấn đáp</Link><Link className="btn btn-secondary" to="/grading">Thẩm định chấm điểm</Link></Space>
     </div>;
 }

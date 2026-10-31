@@ -22,7 +22,7 @@ import {
 const navigation = [
   { key: '/dashboard', icon: <HomeOutlined />, label: 'Tổng quan' },
   { key: '/questions', icon: <QuestionCircleOutlined />, label: 'Ngân hàng câu hỏi & Rubric' },
-  { key: '/exam-room', icon: <SoundOutlined />, label: 'Phòng thi mô phỏng' },
+  { key: '/exam-sessions', icon: <SoundOutlined />, label: 'Ca thi vấn đáp' },
   { key: '/grading', icon: <FileSearchOutlined />, label: 'Thẩm định chấm điểm' },
   { key: '/questions/import', icon: <DatabaseOutlined />, label: 'Nhập câu hỏi từ tài liệu' },
   { key: '/users', icon: <TeamOutlined />, label: 'Quản lý người dùng' },
@@ -108,8 +108,8 @@ export default function MainLayout() {
           </div>
 
           <div className="top-actions">
-            <button className="btn btn-primary start-button" type="button" aria-label="Bắt đầu phòng thi" onClick={() => navigate('/exam-room')}>
-              <SoundOutlined /><span>Bắt đầu phòng thi</span>
+            <button className="btn btn-primary start-button" type="button" aria-label="Tổ chức ca thi" onClick={() => navigate('/exam-sessions')}>
+              <SoundOutlined /><span>Tổ chức ca thi</span>
             </button>
             <Dropdown
               menu={{

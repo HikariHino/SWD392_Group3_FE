@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Auth/Login';
 import QuestionList from './pages/QuestionBank/QuestionList';
 import ImportQuestion from './pages/QuestionBank/ImportQuestion';
+import ExamLobby from './pages/Interview/ExamLobby';
 import ExamRoom from './pages/Interview/ExamRoom';
+import ExamSessions from './pages/ExamSessions/ExamSessions';
 import GradingDashboard from './pages/Grading/GradingDashboard';
 import ReviewTranscript from './pages/Grading/ReviewTranscript';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -30,15 +32,20 @@ export default function AppRoutes() {
                         <Route path="/questions" element={<QuestionList />} />
                         <Route path="/users" element={<UserList />} />
                         <Route path="/questions/import" element={<ImportQuestion />} />
+                        <Route path="/exam-sessions" element={<ExamSessions />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/grading" element={<GradingDashboard />} />
                         <Route path="/grading/review" element={<ReviewTranscript />} />
                     </Route>
                 </Route>
 
-                {/* Phòng thi: Sinh viên vào thi, Giảng viên mở để chạy thử (Test Run) -> chỉ cần đăng nhập */}
+                {/* Phòng thi: API lượt thi và InterviewHub chỉ nhận vai trò Student */}
+                <Route element={<ProtectedRoute requiredRole={ROLES.STUDENT} />}>
+                    <Route path="/exam-room" element={<ExamLobby />} />
+                    <Route path="/exam-room/:sessionId" element={<ExamRoom />} />
+                </Route>
+
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/exam-room" element={<ExamRoom />} />
                     {/* Vào "/" thì điều hướng về trang chính theo vai trò */}
                     <Route path="/" element={<HomeRedirect />} />
                 </Route>

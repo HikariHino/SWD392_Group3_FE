@@ -1,91 +1,239 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Alert, App, Input, Spin } from 'antd';
 import {
   AudioMutedOutlined,
   AudioOutlined,
   CheckCircleFilled,
   CheckOutlined,
   ClockCircleOutlined,
-  CustomerServiceOutlined,
-  EyeOutlined,
-  FlagOutlined,
+  CloudSyncOutlined,
+  DisconnectOutlined,
+  FileTextOutlined,
   LoadingOutlined,
   LockOutlined,
+  LoginOutlined,
+  LogoutOutlined,
   QuestionCircleOutlined,
-  RedoOutlined,
+  ReloadOutlined,
+  RightOutlined,
   RobotOutlined,
-  SafetyCertificateOutlined,
-  SoundOutlined,
+  SendOutlined,
   ThunderboltOutlined,
   UserOutlined,
   WarningOutlined,
+  WifiOutlined,
 } from '@ant-design/icons';
+import { useAuth } from '../../context/AuthContext';
+import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import useExamAttempt from '../../hooks/useExamAttempt';
+import {
+  answersOf,
+  countAnswered,
+  followUpsOf,
+  formatElapsed,
+  MAX_ANSWER_LENGTH,
+  MAX_FOLLOW_UPS,
+  parseSessionId,
+} from '../../utils/examFlow';
 import './ExamRoom.css';
 
-const waveform = [16, 29, 40, 25, 36, 20, 32, 42, 19, 35, 26, 39, 22, 34, 18, 31, 24, 38, 20];
+const CONNECTION_STATES = {
+  idle: { label: 'Chưa kết nối', icon: <DisconnectOutlined /> },
+  connecting: { label: 'Đang kết nối...', icon: <LoadingOutlined spin /> },
+  connected: { label: 'Đã kết nối', icon: <WifiOutlined /> },
+  reconnecting: { label: 'Đang nối lại...', icon: <CloudSyncOutlined spin /> },
+  disconnected: { label: 'Mất kết nối', icon: <DisconnectOutlined /> },
+};
 
-function formatTime(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-  return `${minutes}:${seconds}`;
+const formatClock = (value) => new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+function ConnectionBadge({ status, onReconnect }) {
+  const { label, icon } = CONNECTION_STATES[status];
+  return (
+    <div className={`connection-badge ${status}`} role="status">
+      {icon}<span>{label}</span>
+      {status === 'disconnected' && <button type="button" onClick={onReconnect}>Kết nối lại</button>}
+    </div>
+  );
 }
 
-export default function ExamRoom() {
-  const [secondsLeft, setSecondsLeft] = useState(135);
-  const [recording, setRecording] = useState(true);
-  const [question, setQuestion] = useState(3);
-  const [replaying, setReplaying] = useState(false);
-  const [toast, setToast] = useState('');
+function ExamHeader({ sessionId, status, onReconnect }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+  return (
+    <header className="exam-header">
+      <div className="room-code"><i className={status} /><strong>Phòng thi vấn đáp</strong>{sessionId && <><span /><code>Mã ca {sessionId.slice(0, 8).toUpperCase()}</code></>}</div>
+      <div className="candidate-area">
+        {status && <ConnectionBadge status={status} onReconnect={onReconnect} />}
+        <div className="candidate-card">
+          <div><strong>{user?.fullName || user?.username}</strong><code>{user?.username}</code></div>
+          <div className="camera-avatar"><UserOutlined /></div>
+        </div>
+        <button className="exam-icon-button" type="button" aria-label="Đăng xuất" title="Đăng xuất" onClick={handleLogout}><LogoutOutlined /></button>
+      </div>
+    </header>
+  );
+}
 
+function ElapsedCard({ startedAt }) {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!recording || secondsLeft <= 0) return undefined;
-    const timer = window.setInterval(() => setSecondsLeft((value) => Math.max(0, value - 1)), 1000);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [recording, secondsLeft]);
+  }, []);
+  return (
+    <article className="exam-panel countdown-card">
+      <div className="countdown-heading">
+        <strong><ClockCircleOutlined /> Thời gian đã làm bài</strong>
+        <code>{formatElapsed(Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000)))}</code>
+      </div>
+      <p className="time-notes">Bắt đầu lúc {formatClock(startedAt)}. Nếu ca thi đã hết giờ, hệ thống sẽ báo khi bạn gửi câu trả lời.</p>
+    </article>
+  );
+}
 
-  const timePercent = useMemo(() => Math.max(0, Math.round((secondsLeft / 300) * 100)), [secondsLeft]);
+function TranscriptPanel({ turns, questions, pendingText }) {
+  const streamRef = useRef(null);
+  useEffect(() => {
+    const stream = streamRef.current;
+    if (stream) stream.scrollTop = stream.scrollHeight;
+  }, [turns.length, pendingText]);
 
-  const notify = (message) => {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 2200);
+  const questionNumber = (questionId) => questions.findIndex((question) => question.questionId === questionId) + 1;
+
+  return (
+    <article className="exam-panel transcript-panel">
+      <div className="transcript-heading">
+        <h2><FileTextOutlined /> Bản ghi buổi thi</h2>
+        <span>{turns.length} lượt đã lưu</span>
+      </div>
+      <div className="transcript-stream" ref={streamRef} aria-live="polite">
+        {turns.length === 0 && !pendingText && <p className="transcript-empty">Câu trả lời và câu hỏi xoáy sẽ hiện ở đây sau khi được lưu.</p>}
+        {turns.map((turn) => (
+          <div className={`transcript-block ${turn.speaker === 'AI' ? 'ai' : ''}`} key={turn.id}>
+            <code>{turn.speaker === 'AI' ? 'Giám khảo AI' : 'Bạn'}{turn.questionId ? ` · Câu ${questionNumber(turn.questionId)}` : ''} · {formatClock(turn.timestamp)}</code>
+            <p>{turn.contentText}</p>
+          </div>
+        ))}
+        {pendingText && (
+          <div className="transcript-block live">
+            <code><LoadingOutlined spin /> Đang gửi...</code>
+            <p>{pendingText}</p>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function examinerState(step, awaitingReply, answered) {
+  if (step === 'sending') return 'Đang lưu câu trả lời...';
+  if (step === 'waiting-ai') return 'Giám khảo đang đọc câu trả lời...';
+  if (step === 'submitting') return 'Đang nộp bài...';
+  if (awaitingReply) return 'Mời bạn trả lời câu hỏi xoáy';
+  return answered ? 'Câu trả lời đã được lưu' : 'Mời bạn trả lời';
+}
+
+function CenteredState({ sessionId, children }) {
+  return (
+    <div className="exam-room-page">
+      <ExamHeader sessionId={sessionId} />
+      <main className="exam-center"><article className="exam-panel exam-center-card">{children}</article></main>
+    </div>
+  );
+}
+
+function FinishedView({ sessionId, attempt, questions, turns }) {
+  return (
+    <div className="exam-room-page">
+      <ExamHeader sessionId={sessionId} />
+      <main className="exam-stage finished">
+        <section className="exam-left-column">
+          <article className="exam-panel exam-center-card">
+            <CheckCircleFilled className="result-icon success" />
+            <h1>Bài thi đã được ghi nhận</h1>
+            <p>{attempt.submittedAt ? `Nộp lúc ${new Date(attempt.submittedAt).toLocaleString('vi-VN')}.` : 'Bài thi đã kết thúc.'} Giảng viên sẽ xem lại trước khi công bố kết quả.</p>
+            <div className="finished-stats">
+              <div><strong>{countAnswered(questions, turns)}/{questions.length}</strong><span>Câu đã trả lời</span></div>
+              <div><strong>{turns.filter((turn) => turn.speaker === 'AI').length}</strong><span>Câu hỏi xoáy</span></div>
+            </div>
+            <Link className="btn btn-secondary" to="/exam-room"><LoginOutlined /> Vào ca thi khác</Link>
+          </article>
+        </section>
+        <section className="exam-right-column"><TranscriptPanel turns={turns} questions={questions} pendingText="" /></section>
+      </main>
+    </div>
+  );
+}
+
+function ActiveRoom({ sessionId, exam }) {
+  const { modal } = App.useApp();
+  const { attempt, questions, question, questionIndex, turns, draft, pendingText, step, notice, windowClosed, connection } = exam;
+  const recorder = useAudioRecorder({ onText: exam.appendDraft });
+  const { cancelRecording } = recorder;
+
+  const { questionId } = question;
+  const followUps = followUpsOf(turns, questionId);
+  const answered = answersOf(turns, questionId).length > 0;
+  const lastTurn = turns.at(-1);
+  const awaitingReply = lastTurn?.speaker === 'AI' && lastTurn.questionId === questionId;
+  const latestFollowUp = followUps.at(-1);
+  const answeredCount = countAnswered(questions, turns);
+  const isLastQuestion = questionIndex === questions.length - 1;
+  const busy = step !== 'idle';
+  const canSend = !busy && !windowClosed && (draft.trim() || recorder.interimText.trim());
+  const showFollowUpPanel = latestFollowUp || step === 'waiting-ai' || notice?.action === 'follow-up';
+
+  useEffect(() => cancelRecording, [cancelRecording, questionId]);
+
+  const handleSend = () => {
+    if (!canSend) return;
+    const spoken = recorder.interimText;
+    cancelRecording();
+    exam.sendAnswer(spoken);
   };
 
-  const replayQuestion = () => {
-    setReplaying(true);
-    notify('AI đang đọc lại câu hỏi xoáy');
-    window.setTimeout(() => setReplaying(false), 1800);
-  };
-
-  const completeAnswer = () => {
-    if (question >= 5) {
-      notify('Bài thi đã hoàn thành và được lưu an toàn');
-      setRecording(false);
+  const handleNext = () => {
+    if (!draft.trim()) {
+      exam.nextQuestion();
       return;
     }
-    setQuestion((value) => value + 1);
-    setSecondsLeft(180);
-    setRecording(true);
-    notify('Đã lưu câu trả lời, chuyển sang câu tiếp theo');
+    modal.confirm({
+      title: 'Bạn còn câu trả lời chưa gửi',
+      content: 'Nếu chuyển câu, nội dung đang soạn sẽ không được lưu.',
+      okText: 'Vẫn chuyển câu',
+      cancelText: 'Ở lại',
+      onOk: exam.nextQuestion,
+    });
+  };
+
+  const handleSubmit = () => {
+    const unanswered = questions.length - answeredCount;
+    modal.confirm({
+      title: 'Nộp bài thi?',
+      content: [
+        unanswered > 0 ? `Còn ${unanswered} câu chưa trả lời.` : 'Bạn đã trả lời tất cả câu hỏi.',
+        draft.trim() ? 'Nội dung đang soạn chưa gửi sẽ không được lưu.' : '',
+        'Sau khi nộp sẽ không sửa được bài.',
+      ].filter(Boolean).join(' '),
+      okText: 'Nộp bài',
+      cancelText: 'Làm tiếp',
+      onOk: exam.submit,
+    });
   };
 
   return (
     <div className="exam-room-page">
-      {toast && <div className="exam-toast"><CheckCircleFilled /> {toast}</div>}
+      <ExamHeader sessionId={sessionId} status={connection.status} onReconnect={connection.reconnect} />
 
-      <header className="exam-header">
-        <div className="room-identity">
-          <div className="room-code"><i /><code>VIVA-CS301-2025</code><span /> <strong>Phòng 04 · Hệ Điều Hành</strong></div>
-          <div className="semester"><CustomerServiceOutlined /> Học kỳ II (2024 – 2025)</div>
-        </div>
-
-        <div className="candidate-area">
-          <div className="candidate-card">
-            <div><strong>Nguyễn Văn An</strong><code>MSSV: 20210456</code></div>
-            <div className="camera-avatar"><UserOutlined /><small>CAM</small></div>
-          </div>
-          <div className="face-status"><EyeOutlined /><div><strong>Giám sát khuôn mặt: Hợp lệ</strong><small>Độ tin cậy 99.4% · Không phát hiện gian lận</small></div></div>
-          <button className="exam-icon-button" type="button" aria-label="Báo cáo kỹ thuật" onClick={() => notify('Đã mở trợ giúp kỹ thuật')}><QuestionCircleOutlined /></button>
-        </div>
-      </header>
+      {connection.status === 'reconnecting' && <Alert banner type="warning" title="Kết nối thời gian thực bị gián đoạn, đang thử nối lại. Bạn vẫn có thể gửi câu trả lời." />}
+      {connection.status === 'disconnected' && <Alert banner type="error" title="Không kết nối được kênh thời gian thực. Câu trả lời vẫn được lưu, câu hỏi xoáy sẽ lấy qua API nên có thể chậm hơn." />}
+      {windowClosed && <Alert banner type="error" title="Ca thi không còn nhận câu trả lời. Những gì đã gửi đều được lưu, hãy nộp bài." action={<button className="btn btn-primary" type="button" disabled={busy} onClick={exam.submit}>Nộp bài</button>} />}
 
       <main className="exam-stage">
         <section className="exam-left-column">
@@ -93,67 +241,115 @@ export default function ExamRoom() {
             <div className="examiner-heading">
               <div className="examiner-profile">
                 <span className="robot-mark"><RobotOutlined /></span>
-                <div><div className="title-line"><h1>Giám khảo AI</h1><span>Oral Evaluator v4.2</span><em>Mô hình GPT-4o Viva</em></div><p>Bộ đề thi: Cấu trúc Bộ nhớ & Bộ nhớ ảo (Virtual Memory)</p></div>
+                <div><h1>Giám khảo AI</h1><p>Câu {questionIndex + 1} / {questions.length} · {question.points} điểm</p></div>
               </div>
-              <div className={`listening-pill ${recording ? 'active' : ''}`}><i /> {recording ? 'AI đang lắng nghe sinh viên...' : 'Ghi âm đang tạm dừng'}</div>
+              <div className={`listening-pill ${busy ? 'active' : ''}`}><i /> {examinerState(step, awaitingReply, answered)}</div>
             </div>
-
-            <div className={`voice-visualizer ${recording ? '' : 'paused'}`}>
-              <div className="waveform" aria-label="Biểu đồ âm thanh trực tiếp">
-                {waveform.map((height, index) => <i key={`${height}-${index}`} style={{ '--bar-height': `${height}px`, '--delay': `${(index % 7) * 0.12}s` }} />)}
-              </div>
-              <div className="audio-meta"><span><ThunderboltOutlined /> Độ trễ mô hình: 128ms</span><i /> <span><SoundOutlined /> Giọng đọc: Tiếng Việt Chuẩn (Neural)</span></div>
-            </div>
-
             <div className="base-question">
-              <div><strong><QuestionCircleOutlined /> Câu hỏi gốc #{question.toString().padStart(2, '0')} / 05</strong><span>Bloom: Phân tích (Analyzing)</span></div>
-              <p>“Hãy trình bày cơ chế phân trang (Paging) trong việc ánh xạ từ địa chỉ logic sang địa chỉ vật lý, và nêu sự khác biệt căn bản giữa phân mảnh nội (Internal Fragmentation) và phân mảnh ngoại (External Fragmentation)?”</p>
+              <strong><QuestionCircleOutlined /> Câu hỏi {questionIndex + 1}</strong>
+              <p>{question.content}</p>
             </div>
           </article>
 
-          <article className="exam-panel adaptive-panel">
-            <div className="probe-count"><ThunderboltOutlined /> Lượt hỏi xoáy: 1/2 tối đa</div>
-            <div className="adaptive-alert"><WarningOutlined /><div><strong>Kích hoạt AI Adaptive Logic (Hỏi sâu / Làm rõ)</strong><p>Phát hiện câu trả lời của thí sinh chưa đầy đủ hoặc còn mơ hồ ở khái niệm <u>Phân mảnh nội bộ</u> trong cơ chế phân trang cố định → Kích hoạt câu hỏi xoáy (Follow-up 1/2).</p></div></div>
-            <div className="probe-question"><strong><AudioOutlined /> Câu hỏi xoáy từ Giám khảo AI:</strong><blockquote>“Em vừa khẳng định việc phân trang giải quyết triệt để phân mảnh. Vậy hiện tượng <mark>phân mảnh nội bộ (Internal Fragmentation)</mark> trong khung trang cuối cùng được hệ điều hành giải quyết như thế nào, và trong trường hợp nào thì kích thước trang nhỏ lại gây bất lợi?”</blockquote></div>
-            <div className="probe-meta"><div><span><FlagOutlined /> Trọng số câu hỏi: +20% điểm</span><i /> <span>Độ phức tạp: Mức 4 (Đánh giá chuyên sâu)</span></div><button type="button" onClick={replayQuestion}>{replaying ? <LoadingOutlined spin /> : <SoundOutlined />} Nghe lại câu hỏi xoáy</button></div>
+          {showFollowUpPanel && (
+            <article className="exam-panel adaptive-panel">
+              <div className="probe-count"><ThunderboltOutlined /> Hỏi xoáy {followUps.length}/{MAX_FOLLOW_UPS}</div>
+              {latestFollowUp && <div className="probe-question"><strong><RobotOutlined /> Câu hỏi xoáy từ Giám khảo AI</strong><blockquote>{latestFollowUp.contentText}</blockquote></div>}
+              {step === 'waiting-ai' && <p className="probe-waiting"><LoadingOutlined spin /> Giám khảo đang chuẩn bị câu hỏi xoáy...</p>}
+              {notice?.action === 'follow-up' && (
+                <div className="adaptive-alert" role="alert">
+                  <WarningOutlined />
+                  <div><strong>Chưa lấy được câu hỏi xoáy</strong><p>{notice.message} Câu trả lời của bạn đã được lưu, bạn có thể thử lại hoặc đi tiếp.</p></div>
+                  {!windowClosed && <button type="button" onClick={exam.retryFollowUp}><ReloadOutlined /> Thử lại</button>}
+                </div>
+              )}
+            </article>
+          )}
+
+          <article className="exam-panel composer-panel">
+            <label className="composer-label" htmlFor="exam-answer">{awaitingReply ? 'Câu trả lời cho câu hỏi xoáy' : 'Câu trả lời của bạn'}</label>
+            <Input.TextArea
+              id="exam-answer"
+              value={draft}
+              onChange={(event) => exam.setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) handleSend();
+              }}
+              autoSize={{ minRows: 4, maxRows: 9 }}
+              maxLength={MAX_ANSWER_LENGTH}
+              disabled={busy || windowClosed}
+              placeholder="Nhập câu trả lời hoặc bấm Trả lời bằng giọng nói..."
+            />
+            {recorder.interimText && <p className="composer-interim">{recorder.interimText}<span className="typing-cursor" /></p>}
+            <div className="composer-meta">
+              <span>{recorder.supported ? 'Ctrl + Enter để gửi' : 'Trình duyệt này không nhận giọng nói, hãy gõ câu trả lời. Ctrl + Enter để gửi'}</span>
+              <span>{draft.length.toLocaleString('vi-VN')} / {MAX_ANSWER_LENGTH.toLocaleString('vi-VN')}</span>
+            </div>
+            {recorder.error && <Alert type="warning" showIcon title={recorder.error} />}
+            {notice && notice.action !== 'follow-up' && <Alert type="error" showIcon role="alert" title={notice.message} description={notice.action === 'send' ? 'Nội dung vẫn còn trong ô trả lời. Bấm gửi lại sẽ không tạo câu trả lời trùng.' : undefined} />}
+            <div className="exam-controls">
+              {recorder.supported && (
+                <button className={`control-button ${recorder.isRecording ? 'recording' : ''}`} type="button" disabled={busy || windowClosed} onClick={recorder.isRecording ? recorder.stopRecording : recorder.startRecording}>
+                  {recorder.isRecording ? <AudioMutedOutlined /> : <AudioOutlined />} {recorder.isRecording ? 'Dừng ghi âm' : 'Trả lời bằng giọng nói'}
+                </button>
+              )}
+              <button className="complete-button" type="button" disabled={!canSend} onClick={handleSend}>
+                {step === 'sending' ? <LoadingOutlined spin /> : <SendOutlined />} {step === 'sending' ? 'Đang gửi...' : 'Gửi câu trả lời'}
+              </button>
+            </div>
           </article>
         </section>
 
         <section className="exam-right-column">
-          <article className="exam-panel countdown-card">
-            <div className="countdown-heading"><strong><ClockCircleOutlined /> Thời gian trả lời câu hỏi xoáy</strong><div className={secondsLeft < 60 ? 'urgent' : ''}><code>{formatTime(secondsLeft)}</code><span>còn lại</span></div></div>
-            <div className="time-track"><i style={{ width: `${timePercent}%` }} /></div>
-            <div className="time-notes"><span>Tổng thời lượng phòng thi: 18:45 / 30:00</span><strong>Cảnh báo: {timePercent}% thời gian cho câu này</strong></div>
-          </article>
-
-          <article className="exam-panel transcript-panel">
-            <div className="transcript-heading"><h2><AudioOutlined /> Bản ghi âm trực tiếp <span>(Real-time Speech-to-Text)</span></h2><div className={recording ? 'active' : ''}><i /> STT: {recording ? 'Hoạt động (Mic Active)' : 'Tạm dừng'}</div></div>
-
-            <div className="transcript-stream">
-              <div className="transcript-block"><code>Thí sinh [00:42]:</code><p>“Dạ thưa Giám khảo, em xin trả lời về phân mảnh nội bộ. Khi một tiến trình được cấp phát các trang nhớ, nếu kích thước tiến trình không phải là bội số của <u>Page Size</u>, thì trang cuối cùng chỉ chứa một phần dữ liệu, phần còn lại bị bỏ trống và gọi là <mark>Internal Fragmentation</mark>...”</p></div>
-              <div className="transcript-block live"><code>Thí sinh [{recording ? 'Đang phát biểu · Real-time' : 'Đã tạm dừng'}]:</code><p>“Để giải quyết thì hệ điều hành không thể chia nhỏ trang thêm trong phần cứng chuẩn, nhưng có thể tối ưu bằng cách giảm kích thước trang từ 8KB xuống 4KB. Tuy nhiên nếu chọn <u>Page Size</u> quá nhỏ thì <u>Page Table</u> sẽ tăng kích thước, chiếm dụng bộ nhớ RAM và làm tăng chi phí tra cứu bảng <u>Offset</u>...” {recording && <span className="typing-cursor" />}</p></div>
-            </div>
-
-            <div className="keyword-section">
-              <div><span>Từ khóa thực thể kỹ thuật đã bắt được:</span><strong>4 / 5 Tiêu chuẩn</strong></div>
-              <div className="keyword-list"><span><CheckCircleFilled /> Page Table</span><span><CheckCircleFilled /> Internal Fragmentation</span><span><CheckCircleFilled /> Page Size & Offset</span><span className="missing"><i /> TLB Miss (Chưa nhắc)</span></div>
-            </div>
-
-            <div className="exam-controls">
-              <div>
-                <button className={`control-button ${recording ? 'recording' : ''}`} type="button" onClick={() => setRecording((value) => !value)}>{recording ? <AudioOutlined /> : <AudioMutedOutlined />} {recording ? 'Tạm dừng ghi âm' : 'Tiếp tục ghi âm'}</button>
-                <button className="control-button" type="button" onClick={replayQuestion}>{replaying ? <LoadingOutlined spin /> : <RedoOutlined />} AI nhắc lại câu hỏi</button>
-              </div>
-              <button className="complete-button" type="button" onClick={completeAnswer}><CheckOutlined /> {question >= 5 ? 'Hoàn thành bài thi' : 'Hoàn thành câu trả lời (Chuyển câu tiếp theo)'}</button>
-            </div>
+          <ElapsedCard startedAt={attempt.startedAt} />
+          <TranscriptPanel turns={turns} questions={questions} pendingText={pendingText} />
+          <article className="exam-panel exam-actions">
+            {!isLastQuestion && <button className="control-button" type="button" disabled={busy || !answered} title={answered ? undefined : 'Hãy gửi câu trả lời trước khi chuyển câu'} onClick={handleNext}>Câu tiếp theo <RightOutlined /></button>}
+            <button className={isLastQuestion ? 'complete-button' : 'control-button'} type="button" disabled={busy} onClick={handleSubmit}>
+              {step === 'submitting' ? <LoadingOutlined spin /> : <CheckOutlined />} Nộp bài
+            </button>
           </article>
         </section>
       </main>
 
       <footer className="exam-footer">
-        <div><span><i /> Băng thông WebRTC: 48kbps (Ổn định)</span><b>·</b><span><LockOutlined /> Phiên thi được mã hóa E2E & lưu trữ đối chiếu Hội đồng Khảo thí</span></div>
-        <div><strong>Tiến độ thi: {question}/5 câu hỏi</strong><span className="overall-progress"><i style={{ width: `${(question / 5) * 100}%` }} /></span><SafetyCertificateOutlined /></div>
+        <span><LockOutlined /> Mỗi câu trả lời được lưu trên máy chủ ngay khi gửi</span>
+        <div><strong>Đã trả lời {answeredCount}/{questions.length} câu</strong><span className="overall-progress"><i style={{ width: `${(answeredCount / questions.length) * 100}%` }} /></span></div>
       </footer>
     </div>
   );
 }
+
+function ExamSession({ sessionId }) {
+  const exam = useExamAttempt(sessionId);
+
+  if (exam.phase === 'loading') {
+    return <CenteredState sessionId={sessionId}><Spin size="large" /><h1>Đang vào phòng thi...</h1><p>Hệ thống đang tải câu hỏi và bản ghi của bạn.</p></CenteredState>;
+  }
+  if (exam.phase === 'error') {
+    return (
+      <CenteredState sessionId={sessionId}>
+        <WarningOutlined className="result-icon warning" />
+        <h1>Chưa vào được phòng thi</h1>
+        <p role="alert">{exam.loadError}</p>
+        <div className="center-actions">
+          <button className="btn btn-primary" type="button" onClick={exam.reload}><ReloadOutlined /> Thử lại</button>
+          <Link className="btn btn-secondary" to="/exam-room">Nhập mã khác</Link>
+        </div>
+      </CenteredState>
+    );
+  }
+  if (exam.phase === 'finished') {
+    return <FinishedView sessionId={sessionId} attempt={exam.attempt} questions={exam.questions} turns={exam.turns} />;
+  }
+  return <ActiveRoom sessionId={sessionId} exam={exam} />;
+}
+
+export default function ExamRoom() {
+  const { sessionId } = useParams();
+  const parsedId = parseSessionId(sessionId);
+  if (!parsedId) return <Navigate to="/exam-room" replace />;
+  return <ExamSession key={parsedId} sessionId={parsedId} />;
+}
+
+export { ExamHeader };
