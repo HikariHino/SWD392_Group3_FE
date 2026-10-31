@@ -33,9 +33,7 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
                 bloomLevel: values.bloomLevel,
             }, { signal: controller.signal });
             if (controller.signal.aborted) return;
-            if (typeof data?.content !== 'string' || !data.content.trim() ||
-                !Array.isArray(data.rubrics) || !data.rubrics.length ||
-                data.rubrics.some((rubric) => !rubric || typeof rubric.criteria !== 'string')) {
+            if (typeof data?.content !== 'string' || !data.content.trim()) {
                 setServerError('Máy chủ trả về bản nháp không hợp lệ. Vui lòng thử sinh lại câu hỏi.');
                 return;
             }
@@ -43,7 +41,6 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
                 courseId: values.courseId,
                 bloomLevel: values.bloomLevel,
                 content: data.content,
-                rubrics: data.rubrics.map(({ criteria, weight, maxScore }) => ({ criteria, weight, maxScore })),
             });
         } catch (error) {
             if (controller.signal.aborted) return;
@@ -68,7 +65,7 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
             cancelButtonProps={{ disabled: submitting }} closable={!submitting}
             keyboard={!submitting} mask={{ closable: false }}>
             <Alert type="info" showIcon style={{ marginBottom: 16 }}
-                title="Sinh câu hỏi vấn đáp kèm Rubric"
+                title="Sinh câu hỏi vấn đáp"
                 description="Chọn môn học, nhập chủ đề và mức Bloom. Bạn sẽ được xem, chỉnh sửa bản nháp trước khi lưu." />
             {courses.length === 0 && <Alert type="warning" showIcon style={{ marginBottom: 16 }}
                 title="Chưa có môn học. Hãy kiểm tra danh sách môn học trước khi sinh câu hỏi." />}
@@ -89,7 +86,7 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
                     <Select options={BLOOM_LEVEL_OPTIONS} />
                 </Form.Item>
             </Form>
-            {submitting && <p role="status">Đang sinh câu hỏi và Rubric, vui lòng chờ…</p>}
+            {submitting && <p role="status">Đang sinh câu hỏi, vui lòng chờ…</p>}
         </Modal>
     );
 }

@@ -51,6 +51,8 @@ const BLOOM_ICONS = {
 };
 
 const shortId = (id) => id.slice(0, 8).toUpperCase();
+// Backend đã chuyển Rubric sang cấp môn học nên câu hỏi không còn trường rubrics
+const rubricsOf = (question) => question?.rubrics ?? [];
 const sumMaxScore = (rubrics = []) => Math.round(rubrics.reduce((sum, r) => sum + r.maxScore, 0) * 100) / 100;
 
 function BloomBadge({ value }) {
@@ -169,7 +171,7 @@ export default function QuestionList() {
   const exportRubric = () => {
     if (!selectedQuestion) return;
     const escape = (value) => `"${String(value).replace(/"/g, '""')}"`;
-    const rows = selectedQuestion.rubrics.map((r) => [escape(r.criteria), `${r.weight}%`, r.maxScore].join(','));
+    const rows = rubricsOf(selectedQuestion).map((r) => [escape(r.criteria), `${r.weight}%`, r.maxScore].join(','));
     const content = ['Tiêu chí,Trọng số,Điểm tối đa', ...rows].join('\n');
     const url = URL.createObjectURL(new Blob(['﻿', content], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
@@ -263,19 +265,19 @@ export default function QuestionList() {
                       <span className="status-badge official" title={question.courseName}><TagsOutlined /> {question.courseCode}</span>
                       <code>#{shortId(question.id)}</code>
                     </div>
-                    <span className="used-count"><TableOutlined /> {question.rubrics.length} tiêu chí · {sumMaxScore(question.rubrics)} điểm</span>
+                    <span className="used-count"><TableOutlined /> {rubricsOf(question).length} tiêu chí · {sumMaxScore(rubricsOf(question))} điểm</span>
                   </div>
 
                   <div className="question-content">
                     <h3>“{question.content}”</h3>
-                    {question.rubrics.length > 0 && (
+                    {rubricsOf(question).length > 0 && (
                       <div className="rubric-summary">
                         <div className="summary-head">
-                          <span><TableOutlined /> Ma trận Rubric ({question.rubrics.length} tiêu chí – Tổng {sumMaxScore(question.rubrics)} điểm)</span>
+                          <span><TableOutlined /> Ma trận Rubric ({rubricsOf(question).length} tiêu chí – Tổng {sumMaxScore(rubricsOf(question))} điểm)</span>
                           <b>Trọng số 100%</b>
                         </div>
                         <div className="criterion-grid">
-                          {question.rubrics.map((rubric, index) => (
+                          {rubricsOf(question).map((rubric, index) => (
                             <div key={rubric.id}>
                               <small>Tiêu chí {index + 1} ({rubric.weight}%)</small>
                               <strong>{rubric.criteria}</strong>
@@ -296,7 +298,7 @@ export default function QuestionList() {
                     <div>
                       <Popconfirm
                         title="Xoá câu hỏi này?"
-                        description="Câu hỏi và các tiêu chí Rubric đi kèm sẽ bị xoá khỏi ngân hàng đề."
+                        description="Câu hỏi sẽ bị xoá khỏi ngân hàng đề."
                         okText="Xoá"
                         cancelText="Huỷ"
                         okButtonProps={{ danger: true }}
@@ -307,7 +309,7 @@ export default function QuestionList() {
                         </button>
                       </Popconfirm>
                       <button className="btn btn-secondary" type="button" onClick={(event) => { event.stopPropagation(); openEdit(question.id); }}><EditOutlined /> Chỉnh sửa</button>
-                      <button className="btn btn-soft" type="button" onClick={(event) => { event.stopPropagation(); setSelectedId(question.id); }}><EyeOutlined /> Xem chi tiết Rubric</button>
+                      <button className="btn btn-soft" type="button" onClick={(event) => { event.stopPropagation(); setSelectedId(question.id); }}><EyeOutlined /> Xem chi tiết</button>
                     </div>
                   </div>
                 </article>
@@ -338,11 +340,11 @@ export default function QuestionList() {
                 <h2><TableOutlined /> Ma trận Rubric Chuẩn</h2>
                 <p>{selectedQuestion ? <>Đang xem câu hỏi: <code>#{shortId(selectedQuestion.id)}</code></> : 'Chọn một câu hỏi để xem Rubric'}</p>
               </div>
-              <button className="icon-button" type="button" aria-label="Chỉnh sửa Rubric" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><SettingOutlined /></button>
+              <button className="icon-button" type="button" aria-label="Chỉnh sửa câu hỏi" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><SettingOutlined /></button>
             </div>
             <div className="ai-notice"><RobotOutlined /><p><b>Cơ sở đánh giá tự động (LLM Evaluator):</b> Ma trận này được nạp vào prompt thẩm định AI khi sinh viên trả lời trong phòng viva.</p></div>
 
-            {selectedQuestion?.rubrics.map((rubric, index) => (
+            {rubricsOf(selectedQuestion).map((rubric, index) => (
               <div className="rubric-criterion compact" key={rubric.id}>
                 <div className="criterion-heading">
                   <strong>Tiêu chí {index + 1}: {rubric.criteria} ({rubric.weight}%)</strong>
@@ -350,20 +352,20 @@ export default function QuestionList() {
                 </div>
               </div>
             ))}
-            {selectedQuestion && selectedQuestion.rubrics.length === 0 && (
-              <p className="rubric-empty">Câu hỏi này chưa có tiêu chí Rubric.</p>
+            {selectedQuestion && rubricsOf(selectedQuestion).length === 0 && (
+              <p className="rubric-empty">Rubric được cấu hình theo môn học, không còn gắn với từng câu hỏi.</p>
             )}
 
             <div className="rubric-footer">
-              <button type="button" onClick={exportRubric} disabled={!selectedQuestion}><FileExcelOutlined /> Xuất file Rubric</button>
-              <button className="btn btn-soft" type="button" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><EditOutlined /> Chỉnh sửa Rubric</button>
+              <button type="button" onClick={exportRubric} disabled={rubricsOf(selectedQuestion).length === 0}><FileExcelOutlined /> Xuất file Rubric</button>
+              <button className="btn btn-soft" type="button" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><EditOutlined /> Chỉnh sửa câu hỏi</button>
             </div>
           </div>
 
           <div className="test-run-card">
             <span><SoundOutlined /></span>
-            <div><strong>Chạy thử nghiệm mô phỏng Viva</strong><small>Kiểm thử giọng nói AI đặt câu hỏi và chấm thử</small></div>
-            <button className="btn btn-primary" type="button" onClick={() => navigate('/exam-room')}>Mở Test Run</button>
+            <div><strong>Tổ chức ca thi vấn đáp</strong><small>Chọn câu hỏi, mở ca và gửi link cho sinh viên</small></div>
+            <button className="btn btn-primary" type="button" onClick={() => navigate('/exam-sessions')}>Tạo ca thi</button>
           </div>
         </aside>
       </div>

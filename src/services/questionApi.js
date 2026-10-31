@@ -6,9 +6,9 @@ export const questionApi = {
     getQuestions: (params, config = {}) => axiosClient.get('/questions', { ...config, params }),
     // GET /api/questions/{id}
     getQuestionById: (id) => axiosClient.get(`/questions/${id}`),
-    // POST /api/questions  { courseId, content, bloomLevel, rubrics: [{ criteria, weight, maxScore }] }
+    // POST /api/questions  { courseId, content, bloomLevel }
     createQuestion: (data) => axiosClient.post('/questions', data),
-    // PUT /api/questions/{id}  { content, bloomLevel, rubrics: [...] }
+    // PUT /api/questions/{id}  { content, bloomLevel }
     updateQuestion: (id, data) => axiosClient.put(`/questions/${id}`, data),
     // DELETE /api/questions/{id}
     deleteQuestion: (id) => axiosClient.delete(`/questions/${id}`),

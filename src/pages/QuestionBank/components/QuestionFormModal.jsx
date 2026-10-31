@@ -2,52 +2,23 @@ import React, { useEffect, useState } from 'react';
 import {
     Alert,
     App,
-    Button,
     Col,
     Form,
     Input,
-    InputNumber,
     Modal,
     Row,
     Select,
-    Space,
     Spin,
-    Tag,
-    Tooltip,
-    Typography,
 } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { questionApi } from '../../../services/questionApi';
 import { BLOOM_LEVEL_OPTIONS } from '../../../utils/bloomLevel';
 import { parseApiError } from '../../../utils/apiError';
 
-const { Text } = Typography;
-
-const EMPTY_RUBRIC = { criteria: '', weight: null, maxScore: 10 };
 const INITIAL_VALUES = {
     courseId: undefined,
     bloomLevel: 2,
     content: '',
-    rubrics: [{ criteria: '', weight: 100, maxScore: 10 }],
 };
-
-const sumWeight = (rubrics = []) =>
-    Math.round(rubrics.reduce((sum, r) => sum + (Number(r?.weight) || 0), 0) * 100) / 100;
-
-// Validation phía Client: khớp với FluentValidation ở Backend (QuestionValidators.cs)
-const rubricListRules = [
-    {
-        validator: async (_, rubrics) => {
-            if (!rubrics || rubrics.length === 0) {
-                throw new Error('Câu hỏi phải có ít nhất 1 tiêu chí Rubric đánh giá.');
-            }
-            const total = sumWeight(rubrics);
-            if (Math.abs(total - 100) >= 0.01) {
-                throw new Error(`Tổng trọng số của các tiêu chí phải bằng đúng 100% (hiện tại: ${total}%).`);
-            }
-        },
-    },
-];
 
 const notBlank = (label) => ({
     validator: async (_, value) => {
@@ -56,7 +27,7 @@ const notBlank = (label) => ({
 });
 
 /**
- * Modal Thêm / Sửa câu hỏi.
+ * Modal Thêm / Sửa câu hỏi. Rubric nay thuộc về môn học nên không nhập ở đây.
  * - questionId = null  -> chế độ Thêm mới (POST /api/questions)
  * - questionId = <id>  -> chế độ Sửa    (GET + PUT /api/questions/{id})
  */
@@ -68,8 +39,6 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
     const [serverError, setServerError] = useState(null);
 
     const isEdit = Boolean(questionId);
-    const rubrics = Form.useWatch('rubrics', form) || [];
-    const totalWeight = sumWeight(rubrics);
 
     useEffect(() => {
         if (!open) return;
@@ -92,7 +61,6 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
                     courseId: data.courseId,
                     bloomLevel: data.bloomLevel,
                     content: data.content,
-                    rubrics: data.rubrics.map(({ criteria, weight, maxScore }) => ({ criteria, weight, maxScore })),
                 });
             })
             .catch((error) => {
@@ -108,49 +76,17 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, questionId]);
 
-    const handleValuesChange = (changed) => {
-        // Khi đã báo lỗi tổng trọng số, kiểm tra lại ngay mỗi khi người dùng sửa Rubric
-        if ('rubrics' in changed && form.getFieldError(['rubrics']).length > 0) {
-            form.validateFields([['rubrics']]).catch(() => {});
-        }
-    };
-
-    const distributeWeights = () => {
-        const current = form.getFieldValue('rubrics') || [];
-        if (current.length === 0) return;
-        const base = Math.floor((100 / current.length) * 100) / 100;
-        const last = Math.round((100 - base * (current.length - 1)) * 100) / 100;
-        form.setFieldValue(
-            'rubrics',
-            current.map((r, i) => ({ ...r, weight: i === current.length - 1 ? last : base })),
-        );
-        form.validateFields([['rubrics']]).catch(() => {});
-    };
-
     const handleSubmit = async () => {
         let values;
         try {
             values = await form.validateFields();
         } catch {
-            // Tổng trọng số Rubric sai là lỗi hay gặp nhất -> báo Toast đỏ cho dễ thấy,
-            // ngoài dòng lỗi đã hiển thị sẵn dưới danh sách tiêu chí.
-            const total = sumWeight(form.getFieldValue('rubrics'));
-            if (Math.abs(total - 100) >= 0.01) {
-                message.error(
-                    `Tổng trọng số Rubric đang là ${total}%, phải bằng đúng 100% mới lưu được.`,
-                );
-            }
-            return; // Các lỗi còn lại đã hiển thị ngay tại ô nhập
+            return; // Lỗi đã hiển thị ngay tại ô nhập
         }
 
         const payload = {
             content: values.content.trim(),
             bloomLevel: values.bloomLevel,
-            rubrics: values.rubrics.map((r) => ({
-                criteria: r.criteria.trim(),
-                weight: r.weight,
-                maxScore: r.maxScore,
-            })),
         };
 
         setSubmitting(true);
@@ -196,7 +132,7 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
                 {initialQuestion && !isEdit && (
                     <Alert type="info" showIcon style={{ marginBottom: 16 }}
                         title="Bản nháp chưa được lưu"
-                        description="Kiểm tra nội dung và tiêu chí Rubric trước khi lưu vào ngân hàng câu hỏi."
+                        description="Kiểm tra nội dung trước khi lưu vào ngân hàng câu hỏi."
                     />
                 )}
                 {serverError && (
@@ -221,7 +157,6 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
                     form={form}
                     layout="vertical"
                     initialValues={INITIAL_VALUES}
-                    onValuesChange={handleValuesChange}
                     requiredMark
                 >
                     <Row gutter={16}>
@@ -268,93 +203,6 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
                         />
                     </Form.Item>
 
-                    <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <Text strong>Tiêu chí chấm điểm (Rubric)</Text>
-                        <Space wrap>
-                            <Text type="secondary">Tổng trọng số:</Text>
-                            <Tag color={Math.abs(totalWeight - 100) < 0.01 ? 'success' : 'error'}>
-                                {totalWeight}% / 100%
-                            </Tag>
-                            <Tooltip title="Chia đều 100% cho tất cả tiêu chí">
-                                <Button size="small" onClick={distributeWeights} disabled={rubrics.length === 0}>
-                                    Chia đều
-                                </Button>
-                            </Tooltip>
-                        </Space>
-                    </Space>
-
-                    <Form.List name="rubrics" rules={rubricListRules}>
-                        {(fields, { add, remove }, { errors }) => (
-                            <>
-                                {fields.map(({ key, name }) => (
-                                    <Row key={key} gutter={8} align="top">
-                                        <Col xs={24} sm={12}>
-                                            <Form.Item
-                                                name={[name, 'criteria']}
-                                                label={`Tiêu chí ${name + 1}`}
-                                                rules={[
-                                                    { required: true, message: 'Tiêu chí không được để trống.' },
-                                                    notBlank('Tiêu chí'),
-                                                    { max: 500, message: 'Tối đa 500 ký tự.' },
-                                                ]}
-                                            >
-                                                <Input placeholder="VD: Giải thích đúng khái niệm" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col xs={10} sm={5}>
-                                            <Form.Item
-                                                name={[name, 'weight']}
-                                                label="Trọng số (%)"
-                                                rules={[
-                                                    { required: true, message: 'Nhập trọng số.' },
-                                                    { type: 'number', min: 0.01, max: 100, message: 'Từ 0.01 đến 100.' },
-                                                ]}
-                                            >
-                                                <InputNumber
-                                                    style={{ width: '100%' }}
-                                                    min={0}
-                                                    max={100}
-                                                    step={5}
-                                                    precision={2}
-                                                    suffix="%"
-                                                />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col xs={10} sm={5}>
-                                            <Form.Item
-                                                name={[name, 'maxScore']}
-                                                label="Điểm tối đa"
-                                                rules={[
-                                                    { required: true, message: 'Nhập điểm tối đa.' },
-                                                    { type: 'number', min: 0.01, max: 100, message: 'Từ 0.01 đến 100.' },
-                                                ]}
-                                            >
-                                                <InputNumber style={{ width: '100%' }} min={0} max={100} step={1} />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col xs={4} sm={2} style={{ paddingTop: 30 }}>
-                                            <Tooltip title="Xoá tiêu chí">
-                                                <Button
-                                                    type="text"
-                                                    danger
-                                                    icon={<DeleteOutlined />}
-                                                    onClick={() => remove(name)}
-                                                    aria-label="Xoá tiêu chí"
-                                                />
-                                            </Tooltip>
-                                        </Col>
-                                    </Row>
-                                ))}
-
-                                <Form.Item style={{ marginBottom: 0 }}>
-                                    <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add(EMPTY_RUBRIC)}>
-                                        Thêm tiêu chí
-                                    </Button>
-                                    <Form.ErrorList errors={errors} />
-                                </Form.Item>
-                            </>
-                        )}
-                    </Form.List>
                 </Form>
             </Spin>
         </Modal>

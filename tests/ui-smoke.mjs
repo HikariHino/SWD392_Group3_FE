@@ -64,7 +64,7 @@ async function fulfill(event) {
         await delay(300);
         if (failGeneration) { status = 503; body = { message: 'Dịch vụ AI tạm thời không khả dụng' }; }
         else if (invalidGeneration) body = {};
-        else body = { ...structuredClone(IMPORT_EXAMPLE[0]), ...generated, content: 'Bản nháp AI về Onion Architecture' };
+        else body = { ...generated, content: 'Bản nháp AI về Onion Architecture' };
     }
     else if (url.pathname.endsWith('/questions/import')) {
         imported = JSON.parse(event.request.postData);
@@ -74,7 +74,7 @@ async function fulfill(event) {
             if (failSave) { status = 400; body = { message: 'Không thể lưu bản nháp lúc này' }; }
             else {
                 savedQuestion = JSON.parse(event.request.postData);
-                body = { ...structuredClone(savedQuestion), id: 'ai-saved-question', courseCode: 'SWD392', createdAt: '2026-10-19T08:00:00Z', rubrics: savedQuestion.rubrics.map((r, i) => ({ ...r, id: `ai-r-${i}` })) };
+                body = { ...structuredClone(savedQuestion), id: 'ai-saved-question', courseCode: 'SWD392', createdAt: '2026-10-19T08:00:00Z' };
                 questions.unshift(body); status = 201;
             }
         } else if (failQuestions) { status = 500; body = { title: 'Lỗi kiểm thử kết nối' }; }
@@ -173,16 +173,12 @@ try {
     failGeneration = false; invalidGeneration = true; await clickText('Sinh câu hỏi');
     await waitFor('document.body.innerText.includes("Máy chủ trả về bản nháp không hợp lệ")', 'malformed AI response');
     invalidGeneration = false; await clickText('Sinh câu hỏi');
-    await waitFor('document.body.innerText.includes("Đang sinh câu hỏi và Rubric")', 'AI loading');
+    await waitFor('document.body.innerText.includes("Đang sinh câu hỏi")', 'AI loading');
     assert.ok(await evaluate('document.querySelector("#ai-question_topic").disabled'), 'form locked during generation');
     await waitFor('document.body.innerText.includes("Xem và chỉnh sửa câu hỏi AI")', 'AI editable preview');
     assert.deepEqual(generated, { courseId, topic: 'Onion Architecture', bloomLevel: 4 });
     assert.equal(savedQuestion, null, 'generation does not save');
     assert.equal(await evaluate('document.querySelector("#content").value'), 'Bản nháp AI về Onion Architecture');
-    await input('#rubrics_0_weight', '10'); await clickText('Lưu vào ngân hàng');
-    await waitFor('document.body.innerText.includes("phải bằng đúng 100%")', 'generated rubric validation');
-    assert.equal(savedQuestion, null, 'invalid rubric cannot save');
-    await input('#rubrics_0_weight', String(IMPORT_EXAMPLE[0].rubrics[0].weight));
     await input('#content', 'Câu hỏi AI đã được giảng viên chỉnh sửa');
     await screenshot('ai-preview-mobile', false);
     assert.ok(await evaluate('(() => { const modal = document.querySelector(".ant-modal"); const bounds = modal.getBoundingClientRect(); return [...modal.querySelectorAll("input,textarea")].every(field => { const rect = field.getBoundingClientRect(); return rect.width === 0 || (rect.left >= bounds.left && rect.right <= bounds.right); }); })()'), 'AI preview fields fit modal width');
@@ -194,7 +190,7 @@ try {
     await waitFor('document.querySelector(".question-card h3")?.textContent.includes("Câu hỏi AI đã được giảng viên chỉnh sửa")', 'saved question refreshed');
     assert.equal(savedQuestion.courseId, courseId);
     assert.equal(savedQuestion.bloomLevel, 4);
-    assert.equal(savedQuestion.rubrics.reduce((sum, r) => sum + r.weight, 0), 100);
+    assert.equal(savedQuestion.rubrics, undefined, 'rubric belongs to the course, not the question');
     await clickText('Sinh bằng AI Gemini');
     await waitFor('!!document.querySelector("#ai-question_topic")', 'AI reopened');
     assert.equal(await evaluate('document.querySelector("#ai-question_topic").value'), '', 'new generation starts clean');
