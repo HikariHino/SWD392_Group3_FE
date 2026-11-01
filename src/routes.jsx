@@ -7,7 +7,6 @@ import ExamLobby from './pages/Interview/ExamLobby';
 import ExamRoom from './pages/Interview/ExamRoom';
 import ExamSessions from './pages/ExamSessions/ExamSessions';
 import GradingDashboard from './pages/Grading/GradingDashboard';
-import ReviewTranscript from './pages/Grading/ReviewTranscript';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Reports from './pages/Reports/Reports';
 import UserList from './pages/UserManagement/UserList';
@@ -35,7 +34,8 @@ export default function AppRoutes() {
                         <Route path="/exam-sessions" element={<ExamSessions />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/grading" element={<GradingDashboard />} />
-                        <Route path="/grading/review" element={<ReviewTranscript />} />
+                        <Route path="/grading/review" element={<GradingDashboard />} />
+                        <Route path="/grading/:attemptId" element={<GradingDashboard />} />
                     </Route>
                 </Route>
 

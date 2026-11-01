@@ -4,9 +4,9 @@ import axiosClient from './axiosClient';
 export const examApi = {
     // POST /api/exam-sessions/{id}/attempts -> AttemptDto (vào lại ca thi thì trả về lượt cũ)
     startAttempt: (sessionId) => axiosClient.post(`/exam-sessions/${sessionId}/attempts`),
-    getAttempt: (attemptId) => axiosClient.get(`/attempts/${attemptId}`),
-    getQuestions: (attemptId) => axiosClient.get(`/attempts/${attemptId}/questions`),
-    getTurns: (attemptId) => axiosClient.get(`/attempts/${attemptId}/turns`),
+    getAttempt: (attemptId, config) => axiosClient.get(`/attempts/${attemptId}`, config),
+    getQuestions: (attemptId, config) => axiosClient.get(`/attempts/${attemptId}/questions`, config),
+    getTurns: (attemptId, config) => axiosClient.get(`/attempts/${attemptId}/turns`, config),
     // POST /api/attempts/{id}/answers { questionId, answerText, clientMessageId }
     // Gửi lại cùng clientMessageId không tạo lượt mới, nên an toàn khi thử lại sau lỗi mạng
     sendAnswer: (attemptId, data) => axiosClient.post(`/attempts/${attemptId}/answers`, data),
@@ -16,7 +16,7 @@ export const examApi = {
 
     // POST /api/exam-sessions { courseId, sessionTitle, startTime, endTime, questionIds } (thời gian UTC)
     createSession: (data) => axiosClient.post('/exam-sessions', data),
-    getSession: (sessionId) => axiosClient.get(`/exam-sessions/${sessionId}`),
+    getSession: (sessionId, config) => axiosClient.get(`/exam-sessions/${sessionId}`, config),
     // action: open | close | cancel
     transitionSession: (sessionId, action) => axiosClient.post(`/exam-sessions/${sessionId}/${action}`),
 };

@@ -1,5 +1,7 @@
 # 🎓 AIVES - Frontend Web Application
 
+Flow 4 (transcript, gợi ý AI, rubric và giảng viên chốt điểm): [Hướng dẫn chạy và giới hạn API](docs/DEMO_FLOW4.md).
+
 Hướng dẫn chạy và kiểm tra bản demo hiện tại: [Demo Milestone 3](docs/DEMO_M3.md). Source chính nằm tại `src/`; cấu hình Vite trong `frontend-react/` cũng sử dụng source này.
 
 > **SWD392 (Software Architecture and Design) - Group 3**  

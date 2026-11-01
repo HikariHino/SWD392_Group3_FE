@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Alert, App, Input, Spin } from 'antd';
+import { Alert, App, Input, Spin, Typography } from 'antd';
 import {
   AudioMutedOutlined,
   AudioOutlined,
@@ -158,6 +158,7 @@ function FinishedView({ sessionId, attempt, questions, turns }) {
             <CheckCircleFilled className="result-icon success" />
             <h1>Bài thi đã được ghi nhận</h1>
             <p>{attempt.submittedAt ? `Nộp lúc ${new Date(attempt.submittedAt).toLocaleString('vi-VN')}.` : 'Bài thi đã kết thúc.'} Giảng viên sẽ xem lại trước khi công bố kết quả.</p>
+            <p>Mã lượt thi (gửi giảng viên để thẩm định):<br /><Typography.Text copyable={{ text: attempt.id }} style={{ overflowWrap: 'anywhere' }}>{attempt.id}</Typography.Text></p>
             <div className="finished-stats">
               <div><strong>{countAnswered(questions, turns)}/{questions.length}</strong><span>Câu đã trả lời</span></div>
               <div><strong>{turns.filter((turn) => turn.speaker === 'AI').length}</strong><span>Câu hỏi xoáy</span></div>
