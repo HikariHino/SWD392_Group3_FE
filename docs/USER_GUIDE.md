@@ -6,6 +6,20 @@ Frontend là React/Vite (`src/`) và gọi Web API .NET tại `VITE_API_BASE_URL
 
 Khởi động backend trước, kiểm tra `https://localhost:7035/health/live` trả `200`; sau đó chạy `npm run dev` trong FE và mở `http://localhost:5173`. Gemini API key phải nằm ở User Secrets/backend environment (`Gemini:ApiKey`), không đặt vào `VITE_*` hay commit vào source.
 
+## Tài khoản và dữ liệu test Azure hiện có
+
+> Các tài khoản dưới đây chỉ dùng cho môi trường test Azure hiện tại; đổi hoặc xóa trước khi demo công khai/triển khai thật.
+
+| Vai trò | Username | Password | Mục đích |
+|---|---|---|---|
+| Giảng viên | `lecturer` | `password123` | Tạo rubric, câu hỏi, ca thi và chốt điểm. |
+| Sinh viên | `student_test` | `student123` | Đã có bài nộp 1 câu trả lời. |
+| Sinh viên | `student_empty` | `student123` | Bài không trả lời, đã chốt điểm 0. |
+| Sinh viên | `student_correct` | `student123` | Bài trả lời đúng; AI đã đề xuất 8.5/10. |
+| Sinh viên | `student_wrong` | `student123` | Bài trả lời sai để thử chấm AI. |
+
+Data chính: môn `SWD392`, 1 câu hỏi 10 điểm, 3 tiêu chí rubric cấp môn (40% + 30% + 30%). Ca thi đang mở để test: `15f1481c-428d-4cea-8460-463ca30ed5c0`. Mã lượt thi đã chốt điểm thủ công: `c3fae119-37d2-4d6d-a168-100d6bdf198c`.
+
 ## Luồng giảng viên
 
 ### 1. Ngân hàng câu hỏi và rubric
