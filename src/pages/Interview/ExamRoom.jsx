@@ -80,7 +80,7 @@ function ExamHeader({ sessionId, status, onReconnect }) {
   );
 }
 
-function ElapsedCard({ startedAt }) {
+function ElapsedCard({ startedAt, endTime }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -89,10 +89,10 @@ function ElapsedCard({ startedAt }) {
   return (
     <article className="exam-panel countdown-card">
       <div className="countdown-heading">
-        <strong><ClockCircleOutlined /> Thời gian đã làm bài</strong>
-        <code>{formatElapsed(Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000)))}</code>
+        <strong><ClockCircleOutlined /> {endTime ? 'Thời gian còn lại' : 'Thời gian đã làm bài'}</strong>
+        <code>{formatElapsed(endTime ? Math.max(0, Math.ceil((Date.parse(endTime) - now) / 1000)) : Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000)))}</code>
       </div>
-      <p className="time-notes">Bắt đầu lúc {formatClock(startedAt)}. Nếu ca thi đã hết giờ, hệ thống sẽ báo khi bạn gửi câu trả lời.</p>
+      <p className="time-notes">Bắt đầu lúc {formatClock(startedAt)}. {endTime ? `Ca kết thúc lúc ${formatClock(endTime)}.` : 'Nếu ca thi đã hết giờ, hệ thống sẽ báo khi bạn gửi câu trả lời.'}</p>
     </article>
   );
 }
@@ -302,7 +302,7 @@ function ActiveRoom({ sessionId, exam }) {
         </section>
 
         <section className="exam-right-column">
-          <ElapsedCard startedAt={attempt.startedAt} />
+          <ElapsedCard startedAt={attempt.startedAt} endTime={attempt.sessionEndTime} />
           <TranscriptPanel turns={turns} questions={questions} pendingText={pendingText} />
           <article className="exam-panel exam-actions">
             {!isLastQuestion && <button className="control-button" type="button" disabled={busy || !answered} title={answered ? undefined : 'Hãy gửi câu trả lời trước khi chuyển câu'} onClick={handleNext}>Câu tiếp theo <RightOutlined /></button>}

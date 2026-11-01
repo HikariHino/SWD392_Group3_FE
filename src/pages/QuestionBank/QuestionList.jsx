@@ -130,12 +130,15 @@ export default function QuestionList() {
     setQuery(DEFAULT_QUERY);
   };
 
+  const questionsWithRubrics = useMemo(() => data.items.map((q) => ({
+    ...q, rubrics: courses.find((course) => course.id === q.courseId)?.rubrics ?? [],
+  })), [data.items, courses]);
   const selectedQuestion = useMemo(
-    () => data.items.find((q) => q.id === selectedId) ?? null,
-    [data.items, selectedId],
+    () => questionsWithRubrics.find((q) => q.id === selectedId) ?? null,
+    [questionsWithRubrics, selectedId],
   );
   const selectedCourse = courses.find((c) => c.id === query.courseId);
-  const rubricCountOnPage = data.items.reduce((sum, q) => sum + (q.rubrics?.length || 0), 0);
+  const rubricCountOnPage = questionsWithRubrics.reduce((sum, q) => sum + q.rubrics.length, 0);
   const totalPages = Math.max(1, Math.ceil(data.totalCount / query.pageSize));
 
   const openCreate = () => setModal({ open: true, questionId: null });
@@ -188,7 +191,7 @@ export default function QuestionList() {
         <div>
           <div className="eyebrow"><span>{selectedCourse?.code ?? 'Tất cả môn học'}</span><i /> Ngân hàng học liệu</div>
           <h1>Ngân hàng Câu hỏi & Rubric</h1>
-          <p>Quản lý câu hỏi vấn đáp và chuẩn hóa ma trận chấm điểm (Rubric) cho từng câu hỏi.</p>
+          <p>Quản lý câu hỏi vấn đáp và chuẩn hóa ma trận chấm điểm (Rubric) theo môn học.</p>
         </div>
         <div className="heading-actions">
           <button className="btn btn-soft" type="button" onClick={() => setAiModalOpen(true)}><RobotOutlined /> Sinh bằng AI Gemini</button>
@@ -253,7 +256,7 @@ export default function QuestionList() {
                   <p>Thử thay đổi từ khóa, bộ lọc hoặc tạo câu hỏi mới.</p>
                 </div>
               )}
-              {data.items.map((question) => (
+              {questionsWithRubrics.map((question) => (
                 <article
                   key={question.id}
                   className={`question-card ${question.id === selectedId ? 'selected' : ''}`}

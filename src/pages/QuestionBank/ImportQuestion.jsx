@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, App, Button, Card, Input, InputNumber, Result, Select, Space, Steps, Table, Tag, Upload } from 'antd';
-import { DeleteOutlined, DownloadOutlined, InboxOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Card, Input, Result, Select, Space, Steps, Table, Tag, Upload } from 'antd';
+import { DeleteOutlined, DownloadOutlined, InboxOutlined, ReloadOutlined } from '@ant-design/icons';
 import { questionApi } from '../../services/questionApi';
 import { BLOOM_LEVEL_OPTIONS } from '../../utils/bloomLevel';
 import { parseApiError } from '../../utils/apiError';
@@ -47,7 +47,6 @@ export default function ImportQuestion() {
         return Upload.LIST_IGNORE;
     };
     const editQuestion = (index, patch) => setQuestions((rows) => rows.map((row, i) => i === index ? { ...row, ...patch } : row));
-    const editRubric = (index, ri, patch) => editQuestion(index, { rubrics: questions[index].rubrics.map((r, i) => i === ri ? { ...r, ...patch } : r) });
     const save = async () => {
         if (inFlight.current) return;
         inFlight.current = true; setSaving(true); setError('');
@@ -55,7 +54,7 @@ export default function ImportQuestion() {
             const payload = buildImportPayload(questions, courseId);
             await questionApi.importQuestions(payload);
             setSavedCount(questions.length); setQuestions([]);
-            message.success('Đã lưu câu hỏi và rubric vào ngân hàng.');
+            message.success('Đã lưu câu hỏi vào ngân hàng.');
         } catch (err) {
             if (err.response) {
                 const details = parseApiError(err);
@@ -66,9 +65,9 @@ export default function ImportQuestion() {
     };
     return (
         <div className="workspace-page">
-            <div className="workspace-heading"><div><span className="page-kicker">HỌC LIỆU · NGÂN HÀNG CÂU HỎI</span><h1>Nhập câu hỏi từ tài liệu</h1><p>Chọn môn học, kiểm tra câu hỏi và rubric trước khi lưu vào ngân hàng.</p></div><Link className="btn btn-secondary" to="/questions">Xem ngân hàng câu hỏi</Link></div>
+            <div className="workspace-heading"><div><span className="page-kicker">HỌC LIỆU · NGÂN HÀNG CÂU HỎI</span><h1>Nhập câu hỏi từ tài liệu</h1><p>Chọn môn học và kiểm tra câu hỏi trước khi lưu vào ngân hàng.</p></div><Link className="btn btn-secondary" to="/questions">Xem ngân hàng câu hỏi</Link></div>
             <Steps current={savedCount ? 2 : questions.length ? 1 : 0} items={[{ title: 'Chọn dữ liệu' }, { title: 'Kiểm tra & chỉnh sửa' }, { title: 'Đã lưu' }]} />
-            <Alert type="info" showIcon title="Định dạng đang hỗ trợ: JSON và CSV" description="Có thể xuất CSV UTF-8 từ Excel theo file mẫu. Giáo trình PDF, slide PowerPoint và truy xuất RAG chưa được hỗ trợ; chỉ tải lên danh sách câu hỏi đã có rubric." />
+            <Alert type="info" showIcon title="Định dạng đang hỗ trợ: JSON và CSV" description="Có thể xuất CSV UTF-8 từ Excel theo file mẫu. Rubric được cấu hình theo môn học; giáo trình PDF, slide PowerPoint và RAG chưa được hỗ trợ." />
             {savedCount > 0 ? <Card><Result status="success" title={`Đã lưu ${savedCount} câu hỏi`} subTitle={`Môn học: ${courses.find((c) => c.id === courseId)?.name ?? ''}. Các câu hỏi đã có trong ngân hàng chính thức.`} extra={<Space wrap><Link className="btn btn-primary" to="/questions">Mở ngân hàng câu hỏi</Link><Button onClick={() => { setSavedCount(0); setFilename(''); }}>Nhập danh sách khác</Button></Space>} /></Card> : <>
                 <div className="workspace-two-columns">
                     <Card title="1. Môn học & file câu hỏi">
@@ -80,28 +79,22 @@ export default function ImportQuestion() {
                         {filename && <Tag color="blue">{filename}</Tag>}
                     </Card>
                     <Card title="Tải mẫu để bắt đầu">
-                        <p>Mỗi câu hỏi cần nội dung, mức Bloom (1–6) và danh sách rubric gồm tiêu chí, trọng số, điểm tối đa.</p>
-                        <p>Tổng trọng số mỗi câu phải bằng <strong>100%</strong>. Với CSV, cột <code>rubrics</code> chứa một mảng JSON; file mẫu đã định dạng sẵn.</p>
+                        <p>Mỗi câu hỏi cần nội dung và mức Bloom (1–6). Rubric thuộc môn học và được cấu hình riêng.</p>
+                        <p>CSV gồm hai cột <code>Content,BloomLevel</code>; file mẫu đã định dạng sẵn.</p>
                         <Space wrap><Button icon={<DownloadOutlined />} onClick={() => downloadText(JSON.stringify(IMPORT_EXAMPLE, null, 2), 'cau-hoi-mau.json', 'application/json')}>Mẫu JSON</Button><Button icon={<DownloadOutlined />} onClick={() => downloadText(createCsvTemplate(), 'cau-hoi-mau.csv', 'text/csv;charset=utf-8')}>Mẫu CSV</Button></Space>
                         <p className="muted-text">File được đọc để xem trước trên trình duyệt. Chỉ các câu hỏi bạn xác nhận mới được gửi lên hệ thống.</p>
                     </Card>
                 </div>
                 {error && <Alert type="error" showIcon title="Chưa hoàn thành thao tác" description={<div className="preserve-lines">{error}</div>} />}
                 {questions.length > 0 && <Card title={`2. Kiểm tra ${questions.length} câu hỏi`} extra={<Tag color={errors.length ? 'orange' : 'green'}>{errors.length ? `${errors.length} lỗi cần sửa` : 'Dữ liệu hợp lệ'}</Tag>}>
-                    <p>Mở từng dòng để sửa rubric. Các câu hỏi trong file sẽ được gắn vào môn học đã chọn ở trên.</p>
+                    <p>Sửa nội dung và mức Bloom trước khi lưu. Các câu hỏi được gắn vào môn học đã chọn. Trường rubric trong file cũ sẽ không được nhập vì rubric hiện thuộc môn học.</p>
                     {errors.length > 0 && <Alert className="validation-errors" type="warning" showIcon title="Sửa các lỗi sau trước khi lưu" description={<ul>{errors.map((item, i) => <li key={i}>{item}</li>)}</ul>} />}
                     <Table rowKey="index" dataSource={questions.map((q, index) => ({ ...q, index }))} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 700 }} columns={[
                         { title: '#', dataIndex: 'index', width: 50, render: (i) => i + 1 },
                         { title: 'Nội dung câu hỏi', render: (_, q) => <Input.TextArea aria-label={`Nội dung câu ${q.index + 1}`} value={q.content} onChange={(e) => editQuestion(q.index, { content: e.target.value })} autoSize={{ minRows: 2, maxRows: 6 }} disabled={saving} /> },
                         { title: 'Bloom', width: 200, render: (_, q) => <Select aria-label={`Bloom câu ${q.index + 1}`} className="full-width" value={q.bloomLevel} placeholder="Chọn Bloom" options={BLOOM_LEVEL_OPTIONS} onChange={(value) => editQuestion(q.index, { bloomLevel: value })} disabled={saving} /> },
-                        { title: 'Rubric', width: 90, render: (_, q) => `${q.rubrics.length} tiêu chí` },
                         { title: '', width: 55, render: (_, q) => <Button danger icon={<DeleteOutlined />} aria-label={`Bỏ câu ${q.index + 1}`} disabled={saving} onClick={() => setQuestions((rows) => rows.filter((_, i) => i !== q.index))} /> },
-                    ]} expandable={{ expandedRowRender: (q) => <div className="rubric-editor"><strong>Rubric câu {q.index + 1}</strong>{q.rubrics.map((rubric, ri) => <div className="rubric-edit-row" key={ri}>
-                        <Input.TextArea aria-label={`Tiêu chí ${ri + 1} câu ${q.index + 1}`} placeholder="Nội dung tiêu chí" value={rubric.criteria} autoSize onChange={(e) => editRubric(q.index, ri, { criteria: e.target.value })} disabled={saving} />
-                        <label>Trọng số (%)<InputNumber aria-label={`Trọng số ${ri + 1} câu ${q.index + 1}`} value={Number.isFinite(rubric.weight) ? rubric.weight : null} onChange={(v) => editRubric(q.index, ri, { weight: v })} disabled={saving} /></label>
-                        <label>Điểm tối đa<InputNumber aria-label={`Điểm tối đa ${ri + 1} câu ${q.index + 1}`} value={Number.isFinite(rubric.maxScore) ? rubric.maxScore : null} onChange={(v) => editRubric(q.index, ri, { maxScore: v })} disabled={saving} /></label>
-                        <Button danger icon={<DeleteOutlined />} aria-label={`Bỏ tiêu chí ${ri + 1} câu ${q.index + 1}`} disabled={saving} onClick={() => editQuestion(q.index, { rubrics: q.rubrics.filter((_, i) => i !== ri) })} />
-                    </div>)}<Button icon={<PlusOutlined />} disabled={saving} onClick={() => editQuestion(q.index, { rubrics: [...q.rubrics, { criteria: '', weight: 0, maxScore: 0 }] })}>Thêm tiêu chí</Button></div> }} />
+                    ]} />
                     <div className="import-footer"><span>{questions.length} câu hỏi · {courses.find((c) => c.id === courseId)?.code ?? 'Chưa chọn môn học'}</span><Button type="primary" size="large" loading={saving} disabled={!courseId || errors.length > 0 || reading || coursesLoading || !!courseError} onClick={save}>Lưu {questions.length} câu hỏi vào ngân hàng</Button></div>
                 </Card>}
             </>}
