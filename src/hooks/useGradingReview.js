@@ -119,6 +119,7 @@ export default function useGradingReview(attemptId) {
 
     return { data, loading, busy, error, notice, stale, reload,
         grade: () => run('grading', () => gradingApi.gradeAttempt(attemptId), 'Đã có điểm AI đề xuất. Giảng viên cần thẩm định từng câu.'),
+        prepareManualReview: () => run('manual-review', () => gradingApi.prepareManualReview(attemptId), 'Đã tạo phiếu chấm tay. Bạn có thể nhập và chốt điểm từng câu.'),
         finalize: (assessmentId, payload) => run('finalizing', () => gradingApi.finalizeAssessment(assessmentId, payload), 'Đã lưu điểm chính thức của câu hỏi.'),
     };
 }

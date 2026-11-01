@@ -130,9 +130,9 @@ export default function QuestionFormModal({ open, questionId, initialQuestion, c
         >
             <Spin spinning={loading}>
                 {initialQuestion && !isEdit && (
-                    <Alert type="info" showIcon style={{ marginBottom: 16 }}
+                    <Alert type={initialQuestion.aiDraftWarning ? 'warning' : 'info'} showIcon style={{ marginBottom: 16 }}
                         title="Bản nháp chưa được lưu"
-                        description="Kiểm tra nội dung trước khi lưu vào ngân hàng câu hỏi."
+                        description={initialQuestion.aiDraftWarning || 'Kiểm tra nội dung trước khi lưu vào ngân hàng câu hỏi.'}
                     />
                 )}
                 {serverError && (
