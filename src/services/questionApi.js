@@ -14,6 +14,8 @@ export const questionApi = {
     deleteQuestion: (id) => axiosClient.delete(`/questions/${id}`),
     // GET /api/courses - includes course-level rubrics used by the question bank.
     getCourses: (config = {}) => axiosClient.get('/courses', config),
+    // PUT /api/courses/{courseId}/rubrics
+    replaceCourseRubrics: (courseId, rubrics) => axiosClient.put(`/courses/${courseId}/rubrics`, { rubrics }),
     // Returns a draft; POST /questions persists it after the lecturer reviews it.
     generateQuestionWithAi: (data, config = {}) =>
         axiosClient.post('/questions/ai-generate', data, { timeout: 120000, ...config }),

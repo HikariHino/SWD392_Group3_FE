@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Pagination, Popconfirm, Spin } from 'antd';
+import { App, Modal, Pagination, Popconfirm, Spin } from 'antd';
 import {
   ApartmentOutlined,
   BookOutlined,
@@ -31,6 +31,7 @@ import { parseApiError } from '../../utils/apiError';
 import { formatDate } from '../../utils/formatDate';
 import QuestionFormModal from './components/QuestionFormModal';
 import GenerateQuestionModal from './components/GenerateQuestionModal';
+import CourseRubricModal from './components/CourseRubricModal';
 import './QuestionList.css';
 
 const DEFAULT_QUERY = {
@@ -78,6 +79,8 @@ export default function QuestionList() {
   // modal = { open, questionId } ; questionId = null -> Thêm mới
   const [modal, setModal] = useState({ open: false, questionId: null });
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [rubricCourse, setRubricCourse] = useState(null);
+  const [detailQuestion, setDetailQuestion] = useState(null);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -143,6 +146,11 @@ export default function QuestionList() {
 
   const openCreate = () => setModal({ open: true, questionId: null });
   const openEdit = (id) => setModal({ open: true, questionId: id });
+  const openRubricEditor = () => {
+    const course = selectedQuestion && courses.find((item) => item.id === selectedQuestion.courseId);
+    if (course) setRubricCourse(course);
+    else message.info('Hãy chọn một câu hỏi trước.');
+  };
 
   const handleDelete = async (question) => {
     setDeletingId(question.id);
@@ -312,7 +320,7 @@ export default function QuestionList() {
                         </button>
                       </Popconfirm>
                       <button className="btn btn-secondary" type="button" onClick={(event) => { event.stopPropagation(); openEdit(question.id); }}><EditOutlined /> Chỉnh sửa</button>
-                      <button className="btn btn-soft" type="button" onClick={(event) => { event.stopPropagation(); setSelectedId(question.id); }}><EyeOutlined /> Xem chi tiết</button>
+                      <button className="btn btn-soft" type="button" onClick={(event) => { event.stopPropagation(); setDetailQuestion(question); }}><EyeOutlined /> Xem chi tiết</button>
                     </div>
                   </div>
                 </article>
@@ -343,7 +351,7 @@ export default function QuestionList() {
                 <h2><TableOutlined /> Ma trận Rubric Chuẩn</h2>
                 <p>{selectedQuestion ? <>Đang xem câu hỏi: <code>#{shortId(selectedQuestion.id)}</code></> : 'Chọn một câu hỏi để xem Rubric'}</p>
               </div>
-              <button className="icon-button" type="button" aria-label="Chỉnh sửa câu hỏi" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><SettingOutlined /></button>
+              <button className="icon-button" type="button" aria-label="Cấu hình rubric môn học" disabled={!selectedQuestion} onClick={openRubricEditor}><SettingOutlined /></button>
             </div>
             <div className="ai-notice"><RobotOutlined /><p><b>Cơ sở đánh giá tự động (LLM Evaluator):</b> Ma trận này được nạp vào prompt thẩm định AI khi sinh viên trả lời trong phòng viva.</p></div>
 
@@ -361,7 +369,7 @@ export default function QuestionList() {
 
             <div className="rubric-footer">
               <button type="button" onClick={exportRubric} disabled={rubricsOf(selectedQuestion).length === 0}><FileExcelOutlined /> Xuất file Rubric</button>
-              <button className="btn btn-soft" type="button" disabled={!selectedQuestion} onClick={() => openEdit(selectedQuestion.id)}><EditOutlined /> Chỉnh sửa câu hỏi</button>
+              <button className="btn btn-soft" type="button" disabled={!selectedQuestion} onClick={openRubricEditor}><SettingOutlined /> Cấu hình rubric môn</button>
             </div>
           </div>
 
@@ -394,6 +402,22 @@ export default function QuestionList() {
         onCancel={() => setModal({ open: false, questionId: null })}
         onSaved={handleSaved}
       />
+      <CourseRubricModal
+        course={rubricCourse}
+        onCancel={() => setRubricCourse(null)}
+        onSaved={() => {
+          setRubricCourse(null);
+          questionApi.getCourses().then(({ data: result }) => setCourses(result));
+        }}
+      />
+      <Modal open={Boolean(detailQuestion)} title="Chi tiết câu hỏi" footer={null} onCancel={() => setDetailQuestion(null)}>
+        {detailQuestion && <>
+          <p><b>Môn học:</b> {detailQuestion.courseCode}</p>
+          <p><b>Bloom:</b> {getBloomLevel(detailQuestion.bloomLevel)?.name}</p>
+          <p>{detailQuestion.content}</p>
+          <p><b>Rubric môn học:</b> {rubricsOf(detailQuestion).length} tiêu chí, tổng {sumMaxScore(rubricsOf(detailQuestion))} điểm.</p>
+        </>}
+      </Modal>
     </div>
   );
 }
