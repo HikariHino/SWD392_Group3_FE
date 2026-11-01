@@ -43,16 +43,13 @@ export function parseQuestionFile(text, filename) {
         questions = Array.isArray(value) ? value : value?.questions;
     } else if (/\.csv$/i.test(filename)) {
         const [header, ...rows] = parseCsv(text);
-        const columns = ['content', 'bloomLevel', 'rubrics'].map((name) => header?.indexOf(name));
+        const columns = ['content', 'bloomLevel'].map((name) => header?.findIndex((value) => value.toLowerCase() === name.toLowerCase()));
         if (columns.some((index) => index === undefined || index < 0)) {
-            throw new Error('CSV cần các cột content,bloomLevel,rubrics. Hãy tải file mẫu.');
+            throw new Error('CSV cần các cột content,bloomLevel. Hãy tải file mẫu.');
         }
         questions = rows.map((row, index) => {
             if (row.length !== header.length) throw new Error(`Bản ghi ${index + 1}: số cột CSV không khớp.`);
-            let rubrics;
-            try { rubrics = JSON.parse(row[columns[2]]); }
-            catch { throw new Error(`Bản ghi ${index + 1}: rubrics phải là một mảng JSON hợp lệ.`); }
-            return { content: row[columns[0]], bloomLevel: row[columns[1]], rubrics };
+            return { content: row[columns[0]], bloomLevel: row[columns[1]] };
         });
     } else throw new Error('Chỉ hỗ trợ file .json hoặc .csv (UTF-8).');
     if (!Array.isArray(questions) || !questions.length) throw new Error('File phải chứa danh sách câu hỏi không rỗng.');
@@ -63,11 +60,7 @@ export function parseQuestionFile(text, filename) {
         return {
             content: typeof question.content === 'string' ? question.content.trim() : '',
             bloomLevel: bloom?.value ?? null,
-            rubrics: Array.isArray(question.rubrics) ? question.rubrics.map((rubric) => ({
-                criteria: typeof rubric?.criteria === 'string' ? rubric.criteria.trim() : '',
-                weight: typeof rubric?.weight === 'number' ? rubric.weight : NaN,
-                maxScore: typeof rubric?.maxScore === 'number' ? rubric.maxScore : NaN,
-            })) : [],
+            rubrics: Array.isArray(question.rubrics) ? question.rubrics : [],
         };
     });
 }
@@ -84,14 +77,6 @@ export function validateImportQuestions(questions) {
         if (seen.has(normalized)) errors.push(`${prefix}: trùng nội dung với câu khác trong danh sách.`);
         seen.add(normalized);
         if (!BLOOM_LEVELS.some((level) => level.value === question.bloomLevel)) errors.push(`${prefix}: chọn mức Bloom từ 1 đến 6.`);
-        if (!question.rubrics.length) errors.push(`${prefix}: cần ít nhất một tiêu chí rubric.`);
-        question.rubrics.forEach((rubric, ri) => {
-            if (!rubric.criteria.trim() || rubric.criteria.length > 500) errors.push(`${prefix}, tiêu chí ${ri + 1}: nội dung cần từ 1 đến 500 ký tự.`);
-            if (!Number.isFinite(rubric.weight) || rubric.weight <= 0 || rubric.weight > 100) errors.push(`${prefix}, tiêu chí ${ri + 1}: trọng số phải lớn hơn 0 và không quá 100.`);
-            if (!Number.isFinite(rubric.maxScore) || rubric.maxScore <= 0 || rubric.maxScore > 100) errors.push(`${prefix}, tiêu chí ${ri + 1}: điểm tối đa phải lớn hơn 0 và không quá 100.`);
-        });
-        const total = question.rubrics.reduce((sum, rubric) => sum + rubric.weight, 0);
-        if (!Number.isFinite(total) || Math.abs(total - 100) >= 0.01) errors.push(`${prefix}: tổng trọng số rubric phải bằng 100%.`);
     });
     return errors;
 }
@@ -101,21 +86,22 @@ export function buildImportPayload(questions, courseId) {
     const errors = validateImportQuestions(questions);
     if (errors.length) throw new Error(errors[0]);
     // All rows belong to the selected course, even if the file contains other course IDs.
-    return { courseId, questions: questions.map((question) => ({ ...question, courseId })) };
+    const rows = ['Content,BloomLevel', ...questions.map((question) => {
+        const bloom = BLOOM_LEVELS.find((level) => level.value === question.bloomLevel);
+        return [csvCell(question.content.replace(/\r?\n/g, ' ')), bloom.name].join(',');
+    })];
+    return { courseId, file: new File(['\uFEFF', rows.join('\r\n')], 'questions.csv', { type: 'text/csv' }) };
 }
 
 export const IMPORT_EXAMPLE = [{
     content: 'Giải thích nguyên lý Dependency Inversion và cho một ví dụ.',
     bloomLevel: 2,
-    rubrics: [
-        { criteria: 'Giải thích đúng nguyên lý', weight: 60, maxScore: 6 },
-        { criteria: 'Ví dụ phù hợp', weight: 40, maxScore: 4 },
-    ],
+    rubrics: [],
 }];
 
 export const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
 export function createCsvTemplate() {
-    return 'content,bloomLevel,rubrics\r\n' + IMPORT_EXAMPLE.map((q) => [q.content, q.bloomLevel, JSON.stringify(q.rubrics)].map(csvCell).join(',')).join('\r\n');
+    return 'Content,BloomLevel\r\n' + IMPORT_EXAMPLE.map((q) => [csvCell(q.content), BLOOM_LEVELS.find((level) => level.value === q.bloomLevel).name].join(',')).join('\r\n');
 }
 
 export function downloadText(content, filename, type = 'text/plain;charset=utf-8') {
