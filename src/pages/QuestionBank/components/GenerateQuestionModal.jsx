@@ -41,6 +41,7 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
                 courseId: values.courseId,
                 bloomLevel: values.bloomLevel,
                 content: data.content,
+                aiDraftWarning: data.sourceContext?.startsWith('Bản nháp dự phòng') ? data.sourceContext : '',
             });
         } catch (error) {
             if (controller.signal.aborted) return;
@@ -86,7 +87,7 @@ export default function GenerateQuestionModal({ courses, defaultCourseId, defaul
                     <Select options={BLOOM_LEVEL_OPTIONS} />
                 </Form.Item>
             </Form>
-            {submitting && <p role="status">Đang sinh câu hỏi, vui lòng chờ…</p>}
+            {submitting && <p role="status">Đang hỏi Gemini (tối đa 30 giây). Nếu AI tạm lỗi, hệ thống sẽ mở bản nháp để bạn chỉnh sửa.</p>}
         </Modal>
     );
 }

@@ -16,7 +16,9 @@ export const examApi = {
 
     // POST /api/exam-sessions { courseId, sessionTitle, startTime, endTime, questionIds } (thời gian UTC)
     createSession: (data) => axiosClient.post('/exam-sessions', data),
+    listSessions: () => axiosClient.get('/exam-sessions'),
     getSession: (sessionId, config) => axiosClient.get(`/exam-sessions/${sessionId}`, config),
+    getSessionAttempts: (sessionId, config) => axiosClient.get(`/exam-sessions/${sessionId}/attempts`, config),
     // action: open | close | cancel
     transitionSession: (sessionId, action) => axiosClient.post(`/exam-sessions/${sessionId}/${action}`),
 };

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, App, Button, Card, DatePicker, Empty, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { examApi } from '../../services/examApi';
 import { questionApi } from '../../services/questionApi';
 import { parseApiError } from '../../utils/apiError';
@@ -15,24 +15,6 @@ const STATUS_TAGS = {
 };
 
 const RUBRIC_HINT = 'Môn học cần có Rubric tổng đúng 100% và câu hỏi phải có điểm dương.';
-
-// Backend chưa có API liệt kê ca thi nên ghi nhớ id các ca đã tạo trên trình duyệt này
-const storageKey = (userId) => `aives_exam_sessions_${userId}`;
-const readSessionIds = (userId) => {
-    try {
-        const ids = JSON.parse(localStorage.getItem(storageKey(userId)));
-        return Array.isArray(ids) ? ids : [];
-    } catch {
-        return [];
-    }
-};
-const writeSessionIds = (userId, ids) => {
-    try {
-        localStorage.setItem(storageKey(userId), JSON.stringify(ids));
-    } catch {
-        // Không lưu được thì ca thi vẫn tồn tại trên Backend, chỉ mất khỏi danh sách trên máy này
-    }
-};
 
 const studentLink = (sessionId) => `${window.location.origin}/exam-room/${sessionId}`;
 const formatDateTime = (value) => new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
@@ -49,7 +31,7 @@ const toSubmitError = (error) => {
 
 export default function ExamSessions() {
     const { message } = App.useApp();
-    const { user } = useAuth();
+    const navigate = useNavigate();
     const [form] = Form.useForm();
     const [courses, setCourses] = useState([]);
     const [questions, setQuestions] = useState([]);
@@ -59,19 +41,20 @@ export default function ExamSessions() {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [busyId, setBusyId] = useState(null);
+    const [attempts, setAttempts] = useState({});
+    const [loadingAttempts, setLoadingAttempts] = useState({});
 
     const courseId = Form.useWatch('courseId', form);
 
     const reloadSessions = useCallback(async () => {
-        const ids = readSessionIds(user.id);
         setLoadingSessions(true);
-        const results = await Promise.allSettled(ids.map((id) => examApi.getSession(id)));
-        setSessions(results.filter((result) => result.status === 'fulfilled').map((result) => result.value.data));
-        setLoadingSessions(false);
-        if (results.some((result) => result.status === 'rejected')) {
-            message.warning('Có ca thi chưa tải được, hãy thử tải lại.');
-        }
-    }, [user.id, message]);
+        try {
+            const { data } = await examApi.listSessions();
+            setSessions(data);
+        } catch (error) {
+            message.error(parseApiError(error, 'Không tải được danh sách ca thi.').message);
+        } finally { setLoadingSessions(false); }
+    }, [message]);
 
     useEffect(() => {
         reloadSessions();
@@ -110,7 +93,6 @@ export default function ExamSessions() {
                 endTime: end.toDate().toISOString(),
                 questionIds: values.questionIds,
             });
-            writeSessionIds(user.id, [data.id, ...readSessionIds(user.id)]);
             setSessions((current) => [data, ...current]);
             form.resetFields();
             message.success('Đã tạo ca thi. Bấm Mở ca để sinh viên vào được phòng.');
@@ -134,6 +116,17 @@ export default function ExamSessions() {
         } finally {
             setBusyId(null);
         }
+    };
+
+    const loadAttempts = async (sessionId) => {
+        if (attempts[sessionId] || loadingAttempts[sessionId]) return;
+        setLoadingAttempts((current) => ({ ...current, [sessionId]: true }));
+        try {
+            const { data } = await examApi.getSessionAttempts(sessionId);
+            setAttempts((current) => ({ ...current, [sessionId]: data }));
+        } catch (error) {
+            message.error(parseApiError(error, 'Không tải được danh sách thí sinh.').message);
+        } finally { setLoadingAttempts((current) => ({ ...current, [sessionId]: false })); }
     };
 
     const columns = [
@@ -218,8 +211,15 @@ export default function ExamSessions() {
                 </Form>
             </Card>
 
-            <Card title="Ca thi đã tạo trên trình duyệt này" extra={<Button icon={<ReloadOutlined />} onClick={reloadSessions} loading={loadingSessions}>Tải lại</Button>}>
+            <Card title="Ca thi do bạn tạo" extra={<Button icon={<ReloadOutlined />} onClick={reloadSessions} loading={loadingSessions}>Tải lại</Button>}>
                 <Table rowKey="id" columns={columns} dataSource={sessions} loading={loadingSessions} pagination={false} scroll={{ x: 820 }}
+                    expandable={{ onExpand: (expanded, row) => expanded && loadAttempts(row.id), expandedRowRender: (session) => <Table size="small" rowKey="id" loading={loadingAttempts[session.id]} pagination={false} dataSource={attempts[session.id] || []} columns={[
+                        { title: 'Sinh viên', render: (_, item) => <Space orientation="vertical" size={0}><strong>{item.fullName}</strong><span className="muted-text">{item.username}</span></Space> },
+                        { title: 'Trạng thái bài', dataIndex: 'status', render: (status) => <Tag>{status}</Tag> },
+                        { title: 'Nộp lúc', dataIndex: 'submittedAt', render: (value) => value ? formatDateTime(value) : 'Chưa nộp' },
+                        { title: 'Điểm', dataIndex: 'totalScore', render: (value) => value ?? 'Chưa chốt' },
+                        { title: 'Thao tác', render: (_, item) => <Button size="small" disabled={item.status === 'InProgress'} onClick={() => navigate(`/grading?attemptId=${item.id}`)}>Xem/chấm bài</Button> },
+                    ]} locale={{ emptyText: 'Chưa có sinh viên bắt đầu bài thi.' }} /> }}
                     locale={{ emptyText: <Empty description="Chưa có ca thi nào. Hãy tạo ca đầu tiên ở trên." /> }} />
             </Card>
         </div>

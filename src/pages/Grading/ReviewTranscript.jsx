@@ -132,9 +132,9 @@ export default function ReviewTranscript({ attemptId }) {
         </section>
         <Alert showIcon type={result.status === 'Finalized' ? 'success' : 'info'} title={result.status === 'Finalized'
             ? 'Bài thi đã chốt điểm chính thức.' : 'AI chỉ gợi ý. Giảng viên xem transcript và chốt từng câu trước khi công bố tổng điểm.'}
-            description={result.status === 'InProgress' ? 'Bài đang làm; chưa thể chấm AI hoặc chốt điểm.' : result.status === 'Submitted' ? 'Bấm Chấm gợi ý bằng AI để tạo đánh giá cho bài đã nộp.' : undefined}
-            action={result.status === 'Submitted' && <Button type="primary" icon={<RobotOutlined />} loading={busy === 'grading'} disabled={disabled || stale} onClick={review.grade}>Chấm gợi ý bằng AI</Button>} />
-        {busy === 'grading' && <Alert type="info" showIcon title="AI đang đối chiếu câu trả lời với rubric. Bài nhiều câu có thể cần vài phút." />}
+            description={result.status === 'InProgress' ? 'Bài đang làm; chưa thể chấm hoặc chốt điểm.' : result.status === 'Submitted' ? 'Bạn có thể chấm tay ngay. AI chỉ là gợi ý tùy chọn và nếu không phản hồi, việc chấm tay vẫn tiếp tục bình thường.' : undefined}
+            action={result.status === 'Submitted' && <Space wrap><Button type="primary" loading={busy === 'manual-review'} disabled={disabled || stale} onClick={review.prepareManualReview}>Chấm thủ công ngay</Button><Button icon={<RobotOutlined />} loading={busy === 'grading'} disabled={disabled || stale} onClick={review.grade}>Lấy gợi ý AI (tùy chọn)</Button></Space>} />
+        {busy === 'grading' && <Alert type="info" showIcon title="AI đang đối chiếu câu trả lời với rubric. Nếu AI không phản hồi, hệ thống vẫn mở bài cho bạn chấm tay." />}
         {result.status === 'Grading' && <Alert type="info" showIcon title="Bài đang được chấm AI. Bấm Tải lại để kiểm tra kết quả." />}
         <div className="review-workspace" aria-busy={disabled}>
             <section><Transcript questions={questions} turns={turns} startedAt={attempt.startedAt} /></section>
@@ -145,7 +145,7 @@ export default function ReviewTranscript({ attemptId }) {
                         {questions.map((item, index) => <option key={item.questionId} value={item.questionId}>Câu {index + 1} · {displayScore(item.points)} điểm{isFinalized(assessments.find((entry) => entry.questionId === item.questionId)) ? ' · Đã chốt' : ''}</option>)}
                     </select>
                     {question ? <p className="review-question preserve-lines">{question.content}</p> : <Empty description="Bài thi chưa có câu hỏi." />}
-                    {!assessment && <Alert type="info" showIcon title="Chưa có đánh giá AI cho câu này." />}
+                    {!assessment && <Alert type="info" showIcon title="Chưa có phiếu chấm cho câu này." description="Chọn “Chấm thủ công ngay” để nhập điểm, hoặc lấy gợi ý AI nếu cần." />}
                     {assessment && <>
                         <div className="question-ai-score"><span><RobotOutlined /> AI đề xuất</span><strong>{displayScore(assessment.aiSuggestedScore)} / {displayScore(assessment.points)}</strong>
                             <small>Độ tin cậy: {assessment.aiConfidenceLevel == null ? 'Chưa có dữ liệu' : `${displayScore(assessment.aiConfidenceLevel * 100)}%`}</small></div>
