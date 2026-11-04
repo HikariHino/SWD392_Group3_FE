@@ -19,6 +19,8 @@ import {
   RightOutlined,
   RobotOutlined,
   SendOutlined,
+  SoundOutlined,
+  StopOutlined,
   ThunderboltOutlined,
   UserOutlined,
   WarningOutlined,
@@ -26,6 +28,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { useTextToSpeech } from '../../hooks/useTextToSpeech';
 import useExamAttempt from '../../hooks/useExamAttempt';
 import {
   answersOf,
@@ -176,6 +179,7 @@ function ActiveRoom({ sessionId, exam }) {
   const { modal } = App.useApp();
   const { attempt, questions, question, questionIndex, turns, draft, pendingText, step, notice, windowClosed, connection } = exam;
   const recorder = useAudioRecorder({ onText: exam.appendDraft });
+  const { supported: ttsSupported, isSpeaking, speak, stop } = useTextToSpeech();
   const { cancelRecording } = recorder;
 
   const { questionId } = question;
@@ -190,7 +194,15 @@ function ActiveRoom({ sessionId, exam }) {
   const canSend = !busy && !windowClosed && (draft.trim() || recorder.interimText.trim());
   const showFollowUpPanel = latestFollowUp || step === 'waiting-ai' || notice?.action === 'follow-up';
 
-  useEffect(() => cancelRecording, [cancelRecording, questionId]);
+  useEffect(() => {
+    cancelRecording();
+    stop();
+  }, [cancelRecording, questionId, stop]);
+
+  const speakButton = (text, label = 'Nghe câu hỏi') => {
+    if (!ttsSupported) return null;
+    return <button className="control-button speech-button" type="button" onClick={() => (isSpeaking ? stop() : speak(text))}>{isSpeaking ? <StopOutlined /> : <SoundOutlined />} {isSpeaking ? 'Dừng đọc' : label}</button>;
+  };
 
   const handleSend = () => {
     if (!canSend) return;
@@ -247,7 +259,7 @@ function ActiveRoom({ sessionId, exam }) {
               <div className={`listening-pill ${busy ? 'active' : ''}`}><i /> {examinerState(step, awaitingReply, answered)}</div>
             </div>
             <div className="base-question">
-              <strong><QuestionCircleOutlined /> Câu hỏi {questionIndex + 1}</strong>
+              <div className="question-title-row"><strong><QuestionCircleOutlined /> Câu hỏi {questionIndex + 1}</strong>{speakButton(question.content)}</div>
               <p>{question.content}</p>
             </div>
           </article>
@@ -255,7 +267,7 @@ function ActiveRoom({ sessionId, exam }) {
           {showFollowUpPanel && (
             <article className="exam-panel adaptive-panel">
               <div className="probe-count"><ThunderboltOutlined /> Hỏi xoáy {followUps.length}/{MAX_FOLLOW_UPS}</div>
-              {latestFollowUp && <div className="probe-question"><strong><RobotOutlined /> Câu hỏi xoáy từ Giám khảo AI</strong><blockquote>{latestFollowUp.contentText}</blockquote></div>}
+              {latestFollowUp && <div className="probe-question"><div className="question-title-row"><strong><RobotOutlined /> Câu hỏi xoáy từ Giám khảo AI</strong>{speakButton(latestFollowUp.contentText, 'Nghe câu hỏi xoáy')}</div><blockquote>{latestFollowUp.contentText}</blockquote></div>}
               {step === 'waiting-ai' && <p className="probe-waiting"><LoadingOutlined spin /> Giám khảo đang chuẩn bị câu hỏi xoáy...</p>}
               {notice?.action === 'follow-up' && (
                 <div className="adaptive-alert" role="alert">
