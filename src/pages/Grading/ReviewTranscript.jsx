@@ -92,6 +92,9 @@ export default function ReviewTranscript({ attemptId }) {
     const finalized = isFinalized(assessment);
     const canFinalize = assessment && !finalized && result.status === 'AwaitingReview' && !disabled && !stale;
     const completed = assessments.filter(isFinalized).length;
+    const aiScored = assessments.filter((item) => item.aiSuggestedScore != null);
+    const hasCompleteAiTotal = result.aiSuggestedTotal != null;
+    const partialAiScore = aiScored.length === 1 ? aiScored[0] : null;
     const duration = attemptDuration(attempt);
     const updateDraft = (change) => {
         setDrafts((current) => ({ ...current, [assessment.id]: { ...draft, ...change } }));
@@ -126,14 +129,14 @@ export default function ReviewTranscript({ attemptId }) {
                 <p>{student?.username && <span>Tài khoản: {student.username} · </span>}{session.sessionTitle}</p>
                 <p className="muted-text">Nộp lúc: {dateTime(attempt.submittedAt)}{duration != null && ` · Thời gian làm bài: ${formatElapsed(duration)}`}</p>
                 <Tag color={result.status === 'Finalized' ? 'green' : 'blue'}>{GRADING_STATUSES[result.status] ?? result.status}</Tag></div>
-            <div className="review-totals"><div><span>AI đề xuất</span><strong>{displayScore(result.aiSuggestedTotal)} <small>/ 10</small></strong></div>
+            <div className="review-totals"><div><span>{hasCompleteAiTotal ? 'AI đề xuất' : partialAiScore ? `AI đề xuất · Câu ${questions.findIndex((item) => item.questionId === partialAiScore.questionId) + 1}/${questions.length}` : 'AI đề xuất'}</span><strong>{hasCompleteAiTotal ? <>{displayScore(result.aiSuggestedTotal)} <small>/ 10</small></> : partialAiScore ? <>{displayScore(partialAiScore.aiSuggestedScore)} <small>/ {displayScore(partialAiScore.points)}</small></> : <>{displayScore(null)} <small>/ 10</small></>}</strong></div>
                 <div><span>Điểm chính thức</span><strong>{displayScore(result.totalScore)} <small>/ 10</small></strong></div>
                 <div className="review-progress"><span>Đã chốt {completed}/{questions.length} câu</span><Progress percent={questions.length ? Math.round(100 * completed / questions.length) : 0} showInfo={false} /></div></div>
         </section>
         <Alert showIcon type={result.status === 'Finalized' ? 'success' : 'info'} title={result.status === 'Finalized'
             ? 'Bài thi đã chốt điểm chính thức.' : 'AI chỉ gợi ý. Giảng viên xem transcript và chốt từng câu trước khi công bố tổng điểm.'}
             description={result.status === 'InProgress' ? 'Bài đang làm; chưa thể chấm hoặc chốt điểm.' : result.status === 'Submitted' ? 'Bạn có thể chấm tay ngay. AI chỉ là gợi ý tùy chọn và nếu không phản hồi, việc chấm tay vẫn tiếp tục bình thường.' : undefined}
-            action={result.status === 'Submitted' && <Space wrap><Button type="primary" loading={busy === 'manual-review'} disabled={disabled || stale} onClick={review.prepareManualReview}>Chấm thủ công ngay</Button><Button icon={<RobotOutlined />} loading={busy === 'grading'} disabled={disabled || stale} onClick={review.grade}>Lấy gợi ý AI (tùy chọn)</Button></Space>} />
+            action={(result.status === 'Submitted' || (result.status === 'AwaitingReview' && assessments.some((item) => item.aiSuggestedScore == null && item.finalScore == null && item.studentAnswer?.trim()))) && <Space wrap>{result.status === 'Submitted' && <Button type="primary" loading={busy === 'manual-review'} disabled={disabled || stale} onClick={review.prepareManualReview}>Chấm thủ công ngay</Button>}<Button icon={<RobotOutlined />} loading={busy === 'grading'} disabled={disabled || stale} onClick={review.grade}>{result.status === 'Submitted' ? 'Lấy gợi ý AI (tùy chọn)' : 'Chấm lại bằng AI'}</Button></Space>} />
         {busy === 'grading' && <Alert type="info" showIcon title="AI đang đối chiếu câu trả lời với rubric. Nếu AI không phản hồi, hệ thống vẫn mở bài cho bạn chấm tay." />}
         {result.status === 'Grading' && <Alert type="info" showIcon title="Bài đang được chấm AI. Bấm Tải lại để kiểm tra kết quả." />}
         <div className="review-workspace" aria-busy={disabled}>

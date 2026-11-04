@@ -57,7 +57,7 @@ export const describeGradingError = (error, fallback = 'Không tải được d�
         404: 'Không tìm thấy dữ liệu. Kiểm tra mã lượt thi và thử lại.',
         409: 'Dữ liệu hoặc trạng thái bài thi đã thay đổi. Tải lại trước khi tiếp tục chấm.',
         502: 'AI trả về kết quả không hợp lệ. Hãy thử chấm lại.',
-        503: 'Dịch vụ AI chưa sẵn sàng. Hãy thử lại sau.',
+        503: data?.detail ?? 'Dịch vụ AI chưa sẵn sàng. Hãy thử lại sau.',
         504: 'AI phản hồi quá lâu. Hãy thử chấm lại.',
     };
     if (status === 400 && data?.errors) return Object.values(data.errors).flat().join(' ');
