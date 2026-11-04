@@ -44,12 +44,14 @@
 .listening-pill.active i { background: #2463db; animation: room-pulse 1.25s infinite; }
 .base-question { margin-top: 12px; padding: 13px 15px; border: 1px solid #dce3ec; border-left: 4px solid #2462d2; border-radius: 8px; }
 .base-question strong { display: flex; align-items: center; gap: 6px; color: #1f5fcf; font-size: 12.5px; }
+.question-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.speech-button { flex: 0 0 auto; min-height: 32px; padding: 0 10px; font-size: 12.5px; }
 .base-question p { margin: 8px 0 0; color: #253146; font-size: 16px; font-weight: 500; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .adaptive-panel { flex: 0 0 auto; position: relative; padding: 38px 15px 15px; border: 2px solid #9cb7ea; }
 .probe-count { position: absolute; inset: -2px -2px auto auto; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 0 10px 0 9px; color: #fff; background: var(--exam-blue); font-size: 12px; font-weight: 700; }
 .probe-question { padding: 12px 13px; border: 1px solid #bbcdf1; border-radius: 8px; background: #edf3fd; }
-.probe-question > strong { display: flex; align-items: center; gap: 6px; color: #1f5cc9; font-size: 12.5px; }
+.probe-question strong { display: flex; align-items: center; gap: 6px; color: #1f5cc9; font-size: 12.5px; }
 .probe-question blockquote { margin: 8px 0 0; padding-left: 11px; border-left: 2px solid #2463db; color: #283449; font-size: 15px; font-weight: 500; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .probe-waiting { display: flex; align-items: center; gap: 8px; margin: 2px 0; color: #1f5cc9; font-size: 13px; font-weight: 600; }
 .probe-question + .probe-waiting, .probe-question + .adaptive-alert { margin-top: 10px; }
